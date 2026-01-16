@@ -12,14 +12,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
+    "express-session": "^1.18.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
+    "passport": "^0.7.0",
+    "passport-oauth2": "^1.8.0",
     "pg": "^8.17.1"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 # API Sistem Pengelolaan Perumahan
 
-Backend REST API untuk sistem pengelolaan perumahan yang mencakup manajemen keuangan, properti, dan persediaan.
+Backend REST API untuk sistem pengelolaan perumahan yang mencakup manajemen keuangan, properti, dan persediaan dengan OAuth 2.0 authentication.
 
 ## Fitur
 
@@ -10,22 +10,29 @@ Backend REST API untuk sistem pengelolaan perumahan yang mencakup manajemen keua
 - ✅ Manajemen Penjualan Properti
 - ✅ Laporan dan Statistik
 - ✅ CRUD lengkap untuk semua modul
+- ✅ OAuth 2.0 Authentication (Google, GitHub, dll)
+- ✅ Email & Password Authentication
+- ✅ Role-based Access Control (Admin, User)
+- ✅ Refresh Token Support
 
 ## Tech Stack
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: PostgreSQL
-- **Security**: Helmet, CORS, Rate Limiting
+- **Database**: PostgreSQL (via Supabase)
+- **Authentication**: Supabase Auth (OAuth 2.0, Email/Password)
+- **Security**: Helmet, CORS, Rate Limiting, JWT
 - **Environment**: dotenv
+- **Deployment**: Fly.io
 
 ## Instalasi
 
 ### Prerequisites
 
 - Node.js (v14 atau higher)
-- PostgreSQL (v12 atau higher)
 - npm atau yarn
+- Akun Supabase (Gratis di supabase.com)
+- Akun Fly.io (Opsional untuk deployment)
 
 ### Langkah-langkah Instalasi
 
@@ -40,33 +47,46 @@ cd api-system-perum
 npm install
 ```
 
-3. Setup environment variables:
+3. Setup Supabase:
+
+   a. Buat project baru di [Supabase](https://supabase.com/)
+   
+   b. Dapatkan credentials dari Settings → API:
+      - Project URL
+      - anon/public key
+      - Database connection string
+
+   c. Enable OAuth providers di Authentication → Providers:
+      - Google
+      - GitHub
+      - dll
+
+4. Setup environment variables:
 ```bash
 cp .env.example .env
 ```
 
-4. Edit file `.env` sesuai dengan konfigurasi database Anda:
+5. Edit file `.env` dengan konfigurasi Supabase:
 ```env
 PORT=3000
 NODE_ENV=development
 
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=perumahan_db
-DB_USER=postgres
-DB_PASSWORD=your_password_here
+# Frontend URL untuk OAuth redirect
+FRONTEND_URL=http://localhost:3000
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
 ```
 
-5. Setup database:
+6. Setup database:
 ```bash
-# Buat database PostgreSQL
-createdb perumahan_db
-
-# Import schema
-psql -U postgres -d perumahan_db -f database/schema.sql
+# Import schema ke Supabase
+psql $DATABASE_URL < database/schema.sql
 ```
 
-6. Jalankan server:
+7. Jalankan server:
 ```bash
 # Development mode
 npm run dev
@@ -78,6 +98,20 @@ npm start
 Server akan berjalan di `http://localhost:3000`
 
 ## API Endpoints
+
+### Authentication (/api/auth)
+
+| Method | Endpoint | Deskripsi | Auth |
+|--------|----------|-----------|------|
+| GET | `/api/auth/oauth` | Dapatkan OAuth URL | Public |
+| POST | `/api/auth/callback` | Handle OAuth callback | Public |
+| POST | `/api/auth/signup` | Sign up dengan email/password | Public |
+| POST | `/api/auth/signin` | Sign in dengan email/password | Public |
+| POST | `/api/auth/reset-password` | Reset password | Public |
+| POST | `/api/auth/refresh-token` | Refresh access token | Public |
+| POST | `/api/auth/signout` | Sign out | Protected |
+| GET | `/api/auth/profile` | Get current user profile | Protected |
+| PUT | `/api/auth/profile` | Update user profile | Protected |
 
 ### Keuangan (/api/keuangan)
 
@@ -134,6 +168,79 @@ Server akan berjalan di `http://localhost:3000`
 | POST | `/api/penjualan/:id/complete` | Selesaikan penjualan |
 
 ## Contoh Request
+
+### Sign Up dengan Email dan Password
+
+```bash
+POST /api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword123",
+  "name": "John Doe",
+  "role": "user"
+}
+```
+
+### Sign In dengan Email dan Password
+
+```bash
+POST /api/auth/signin
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Login berhasil",
+  "data": {
+    "user": {
+      "id": "user-uuid-here",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "user"
+    },
+    "session": {
+      "access_token": "eyJhbGc...",
+      "refresh_token": "eyJhbGc...",
+      "expires_at": 1705891200
+    }
+  }
+}
+```
+
+### Get OAuth URL (Google)
+
+```bash
+GET /api/auth/oauth?provider=google&redirectTo=http://localhost:3000/auth/callback
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://accounts.google.com/o/oauth2/v2/auth?...",
+    "provider": "google"
+  }
+}
+```
+
+### Mengakses Endpoint yang Dilindungi
+
+Untuk mengakses endpoint yang memerlukan autentikasi, sertakan token di header:
+
+```bash
+GET /api/keuangan
+Authorization: Bearer eyJhbGc...
+```
 
 ### Buat Transaksi Keuangan Baru
 
@@ -261,12 +368,23 @@ Content-Type: application/json
 Lihat file `database/schema.sql` untuk detail lengkap struktur database.
 
 Tabel utama:
-- `users` - Pengguna sistem
+- `users` - Pengguna sistem (sinkronisasi dengan Supabase Auth)
 - `properties` - Data properti
 - `financial_transactions` - Transaksi keuangan
 - `inventory` - Item persediaan
 - `inventory_transactions` - Riwayat transaksi persediaan
 - `property_sales` - Penjualan properti
+
+### Sinkronisasi dengan Supabase Auth
+
+Tabel `users` di database lokal akan otomatis disinkronisasi dengan Supabase Auth setiap kali user login atau register. ID user dari Supabase akan digunakan sebagai foreign key di tabel lain.
+
+### Security Notes
+
+- Semua password disimpan di Supabase Auth (bcrypt hashed)
+- User OAuth tidak memiliki password di database lokal
+- Access token dari Supabase digunakan untuk autentikasi
+- Refresh token dapat digunakan untuk mendapatkan access token baru tanpa login ulang
 
 ## Error Handling
 
@@ -288,22 +406,65 @@ Status codes:
 
 ## Deployment
 
-### Railway
+### Deploy ke Fly.io
 
-1. Push code ke GitHub
-2. Login ke Railway
-3. Buat project baru dari repository GitHub
-4. Setup environment variables di Railway
-5. Deploy otomatis akan berjalan
+1. Install Fly CLI:
+```bash
+curl -L https://fly.io/install.sh | sh
+```
 
-### Render
+2. Login ke Fly.io:
+```bash
+fly auth login
+```
 
-1. Push code ke GitHub
-2. Login ke Render
-3. Buat Web Service baru
-4. Hubungkan dengan repository GitHub
-5. Setup environment variables
-6. Deploy
+3. Inisialisasi aplikasi:
+```bash
+fly launch
+```
+
+4. Setup environment variables di Fly.io dashboard:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - DATABASE_URL
+   - FRONTEND_URL
+
+5. Deploy aplikasi:
+```bash
+fly deploy
+```
+
+6. Cek status aplikasi:
+```bash
+fly status
+```
+
+7. Lihat logs:
+```bash
+fly logs
+```
+
+### Deploy dengan GitHub Actions (Opsional)
+
+1. Buat repository di GitHub
+2. Push code ke repository:
+```bash
+git remote add origin https://github.com/username/api-system-perum.git
+git branch -M main
+git push -u origin main
+```
+
+3. GitHub Actions akan otomatis deploy ke Fly.io (jika workflow dikonfigurasi)
+
+### Environment Variables untuk Production
+
+Setiap environment variable yang perlu di-set di Fly.io dashboard:
+- `PORT`: 3000
+- `NODE_ENV`: production
+- `FRONTEND_URL`: URL frontend Anda
+- `SUPABASE_URL`: URL dari Supabase dashboard
+- `SUPABASE_ANON_KEY`: Anon key dari Supabase dashboard
+- `DATABASE_URL`: Connection string dari Supabase database settings
 
 ## Contributing
 
@@ -316,6 +477,65 @@ Status codes:
 ## License
 
 ISC
+
+## Troubleshooting
+
+### Error: "No authorization token provided"
+
+Pastikan Anda menyertakan header Authorization dengan format:
+```
+Authorization: Bearer <your-access-token>
+```
+
+### Error: "Invalid or expired token"
+
+Refresh token Anda menggunakan endpoint `/api/auth/refresh-token`:
+```bash
+POST /api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refresh_token": "your-refresh-token"
+}
+```
+
+### Error: "Database connection failed"
+
+Periksa:
+1. DATABASE_URL di environment variables sudah benar
+2. Supabase project dalam status active
+3. IP address Anda tidak diblokir oleh Supabase
+
+### Error: "Missing Supabase credentials"
+
+Pastikan environment variables berikut sudah di-set:
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- DATABASE_URL
+
+### OAuth tidak berfungsi
+
+1. Pastikan OAuth provider sudah di-enable di Supabase dashboard
+2. Periksa redirect URL di Supabase dashboard sudah sesuai dengan frontend Anda
+3. FRONTEND_URL di environment variables harus sesuai dengan URL frontend Anda
+
+## Testing dengan Postman/Insomnia
+
+1. Import collection Postman (opsional)
+2. Setup environment variables:
+   - `base_url`: URL API Anda (http://localhost:3000 untuk development)
+   - `access_token`: Token dari response login
+3. Gunakan token untuk mengakses endpoint yang dilindungi
+
+## Rate Limiting
+
+API memiliki rate limiting untuk mencegah abuse:
+- 100 requests per 15 menit per IP
+- Error response: "Too many requests from this IP, please try again later."
+
+Untuk mengubah rate limit, update environment variables:
+- `RATE_LIMIT_WINDOW_MS`: Window time dalam milliseconds
+- `RATE_LIMIT_MAX_REQUESTS`: Maximum requests per window
 
 ## Kontak
 

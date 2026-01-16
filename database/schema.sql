@@ -3,12 +3,12 @@
 -- Create database if not exists
 -- CREATE DATABASE perumahan_db;
 
--- Users table for authentication
+-- Users table for authentication (sync with Supabase Auth)
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255), -- Nullable karena user OAuth tidak punya password
     role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

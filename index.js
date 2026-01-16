@@ -38,12 +38,14 @@ app.get('/', (req, res) => {
 });
 
 // Import routes
+const authRoutes = require('./src/routes/auth');
 const keuanganRoutes = require('./src/routes/keuangan');
 const propertiRoutes = require('./src/routes/properti');
 const persediaanRoutes = require('./src/routes/persediaan');
 const penjualanRoutes = require('./src/routes/penjualan');
 
 // Use routes
+app.use('/api/auth', authRoutes);
 app.use('/api/keuangan', keuanganRoutes);
 app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);
