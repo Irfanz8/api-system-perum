@@ -23,7 +23,7 @@ Backend REST API untuk sistem pengelolaan perumahan yang mencakup manajemen keua
 - **Authentication**: Supabase Auth (OAuth 2.0, Email/Password)
 - **Security**: Helmet, CORS, Rate Limiting, JWT
 - **Environment**: dotenv
-- **Deployment**: Vercel, Fly.io, Render
+- **Deployment**: Fly.io
 
 ## Instalasi
 
@@ -418,30 +418,6 @@ Status codes:
 - `500` - Internal Server Error
 
 ## Deployment
-
-### Deploy ke Vercel (Recommended)
-
-1. **Via Dashboard (Paling Mudah)**:
-   - Login ke [Vercel](https://vercel.com)
-   - Klik "Add New Project"
-   - Import repository `Irfanz8/api-system-perum`
-   - Set environment variables:
-     - `SUPABASE_URL`
-     - `SUPABASE_ANON_KEY`
-     - `DATABASE_URL`
-     - `FRONTEND_URL`
-     - `NODE_ENV=production`
-   - Klik "Deploy"
-
-2. **Via CLI**:
-   ```bash
-   npm i -g vercel
-   vercel login
-   vercel
-   vercel --prod
-   ```
-
-   Lihat dokumentasi lengkap di [docs/VERCEL_DEPLOYMENT.md](./docs/VERCEL_DEPLOYMENT.md)
 
 ### Deploy ke Fly.io
 

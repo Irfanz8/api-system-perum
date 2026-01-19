@@ -21,12 +21,6 @@ const options = {
         description: 'Development server'
       },
       {
-        url: process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'https://api-system-perum.vercel.app',
-        description: 'Production server (Vercel)'
-      },
-      {
         url: 'https://api-system-perum.fly.dev',
         description: 'Production server (Fly.io)'
       }
