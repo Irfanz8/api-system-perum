@@ -1,8 +1,12 @@
 {
   "name": "api-system-perum",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API untuk Sistem Pengelolaan Perumahan",
   "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
