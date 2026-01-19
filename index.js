@@ -11,8 +11,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+// Configure Helmet untuk Swagger UI compatibility
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable untuk Swagger UI
+  crossOriginEmbedderPolicy: false
+}));
+
+// Configure CORS untuk allow semua origin (untuk Swagger UI)
+app.use(cors({
+  origin: '*', // Allow semua origin untuk Swagger UI
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}));
+
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -59,7 +71,17 @@ app.use('/api/persediaan', persediaanRoutes);
 app.use('/api/penjualan', penjualanRoutes);
 
 // Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const swaggerUiOptions = {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'API Sistem Pengelolaan Perumahan',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    tryItOutEnabled: true
+  }
+};
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

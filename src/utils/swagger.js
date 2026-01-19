@@ -21,6 +21,14 @@ const options = {
         description: 'Development server'
       },
       {
+        url: process.env.RAILWAY_PUBLIC_DOMAIN 
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+          : process.env.RAILWAY_STATIC_URL
+          ? process.env.RAILWAY_STATIC_URL
+          : 'https://web-production-bd9e5.up.railway.app',
+        description: 'Production server (Railway)'
+      },
+      {
         url: 'https://api-system-perum.fly.dev',
         description: 'Production server (Fly.io)'
       }
