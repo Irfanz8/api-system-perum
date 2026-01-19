@@ -88,7 +88,7 @@ const swaggerUiOptions = {
 };
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
-// Error handling middleware
+// Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   console.error('Stack:', err.stack);
@@ -97,8 +97,17 @@ app.use((err, req, res, next) => {
   if (err instanceof SyntaxError || (err.status === 400 && 'body' in err)) {
     return res.status(400).json({
       error: 'Invalid JSON',
-      message: 'The request body contains invalid JSON. Please check for unescaped control characters (like newlines or tabs) or malformed JSON syntax.',
+      message: 'The request body contains invalid JSON syntax. Please check your JSON format.',
+      hint: 'Common issues: missing closing quotes (e.g., "email": "value,), unescaped special characters, or malformed JSON structure.',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+  
+  // Handle validation errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'Validation Error',
+      message: err.message
     });
   }
   
