@@ -2,13 +2,14 @@
  * Generate Swagger UI HTML dengan CDN untuk Vercel compatibility
  */
 function generateSwaggerUIHTML(spec) {
-  const specJson = JSON.stringify(spec, null, 2);
+  // Stringify spec dengan escape untuk aman di HTML
+  const specJson = JSON.stringify(spec).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
   
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Documentation - Sistem Pengelolaan Perumahan</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css" />
   <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.10.3/favicon-32x32.png" sizes="32x32" />
@@ -37,8 +38,9 @@ function generateSwaggerUIHTML(spec) {
   <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
   <script>
     window.onload = function() {
+      const spec = ${specJson};
       const ui = SwaggerUIBundle({
-        spec: ${specJson},
+        spec: spec,
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -55,13 +57,11 @@ function generateSwaggerUIHTML(spec) {
         tryItOutEnabled: true
       });
       
-      // Setup auth
       window.ui = ui;
     };
   </script>
 </body>
-</html>
-  `;
+</html>`;
 }
 
 module.exports = generateSwaggerUIHTML;

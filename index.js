@@ -51,36 +51,32 @@ const propertiRoutes = require('./src/routes/properti');
 const persediaanRoutes = require('./src/routes/persediaan');
 const penjualanRoutes = require('./src/routes/penjualan');
 
-// Use routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/keuangan', keuanganRoutes);
-app.use('/api/properti', propertiRoutes);
-app.use('/api/persediaan', persediaanRoutes);
-app.use('/api/penjualan', penjualanRoutes);
-
-// Swagger documentation
+// Swagger documentation - harus didefinisikan sebelum routes lain
 // Check if running on Vercel (serverless)
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
 
 if (isVercel) {
   // Use custom HTML with CDN for Vercel compatibility
-  app.get('/api-docs', (req, res) => {
-    const html = generateSwaggerUIHTML(swaggerSpec);
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
-  });
-  
-  // Handle Swagger UI static files requests (redirect to CDN)
+  // Handle Swagger UI static files requests first (more specific route)
   app.get('/api-docs/*', (req, res) => {
     // Redirect static file requests to CDN
     const file = req.path.replace('/api-docs/', '');
-    if (file.includes('.css')) {
-      res.redirect(`https://unpkg.com/swagger-ui-dist@5.10.3/${file}`);
-    } else if (file.includes('.js')) {
+    if (file.includes('.css') || file.includes('.js') || file.includes('.png') || file.includes('.ico')) {
       res.redirect(`https://unpkg.com/swagger-ui-dist@5.10.3/${file}`);
     } else {
       res.redirect('/api-docs');
+    }
+  });
+  
+  // Main Swagger UI page
+  app.get('/api-docs', (req, res) => {
+    try {
+      const html = generateSwaggerUIHTML(swaggerSpec);
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error('Error generating Swagger UI:', error);
+      res.status(500).send('Error loading API documentation');
     }
   });
 } else {
@@ -97,6 +93,14 @@ if (isVercel) {
   };
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 }
+
+// Use routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/keuangan', keuanganRoutes);
+app.use('/api/properti', propertiRoutes);
+app.use('/api/persediaan', persediaanRoutes);
+app.use('/api/penjualan', penjualanRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
