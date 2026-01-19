@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./src/utils/swagger');
+const generateSwaggerUIHTML = require('./src/utils/swagger-ui-html');
 require('dotenv').config();
 
 const app = express();
@@ -59,7 +60,43 @@ app.use('/api/persediaan', persediaanRoutes);
 app.use('/api/penjualan', penjualanRoutes);
 
 // Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Check if running on Vercel (serverless)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+
+if (isVercel) {
+  // Use custom HTML with CDN for Vercel compatibility
+  app.get('/api-docs', (req, res) => {
+    const html = generateSwaggerUIHTML(swaggerSpec);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // Handle Swagger UI static files requests (redirect to CDN)
+  app.get('/api-docs/*', (req, res) => {
+    // Redirect static file requests to CDN
+    const file = req.path.replace('/api-docs/', '');
+    if (file.includes('.css')) {
+      res.redirect(`https://unpkg.com/swagger-ui-dist@5.10.3/${file}`);
+    } else if (file.includes('.js')) {
+      res.redirect(`https://unpkg.com/swagger-ui-dist@5.10.3/${file}`);
+    } else {
+      res.redirect('/api-docs');
+    }
+  });
+} else {
+  // Use standard Swagger UI for local development
+  const swaggerUiOptions = {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'API Sistem Pengelolaan Perumahan',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true
+    }
+  };
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
