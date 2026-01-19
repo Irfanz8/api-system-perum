@@ -56,11 +56,13 @@ exports.getUserById = async (req, res) => {
 
 /**
  * Update user role (superadmin only)
+ * Note: Untuk fitur lengkap dengan validasi hierarki, gunakan /api/roles/users/:id/role
  */
 exports.updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
+    const currentUser = req.user;
     
     if (!role) {
       return res.status(400).json({
@@ -73,6 +75,49 @@ exports.updateUserRole = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: `Role tidak valid. Role yang tersedia: ${Object.values(ROLES).join(', ')}`
+      });
+    }
+
+    // Validasi: Superadmin tidak bisa downgrade dirinya sendiri
+    if (currentUser.id === id && currentUser.role === ROLES.SUPERADMIN && role !== ROLES.SUPERADMIN) {
+      return res.status(403).json({
+        success: false,
+        error: 'Superadmin tidak bisa mengubah role sendiri'
+      });
+    }
+
+    // Validasi: Hanya superadmin yang bisa assign superadmin
+    if (role === ROLES.SUPERADMIN && currentUser.role !== ROLES.SUPERADMIN) {
+      return res.status(403).json({
+        success: false,
+        error: 'Hanya superadmin yang bisa assign role superadmin'
+      });
+    }
+
+    // Get user yang akan di-update
+    const userQuery = 'SELECT id, email, role FROM users WHERE id = $1';
+    const userResult = await db.query(userQuery, [id]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User tidak ditemukan'
+      });
+    }
+
+    const targetUser = userResult.rows[0];
+
+    // Validasi: Tidak bisa mengubah role user yang levelnya sama atau lebih tinggi
+    const roleLevels = {
+      [ROLES.SUPERADMIN]: 3,
+      [ROLES.ADMIN]: 2,
+      [ROLES.USER]: 1
+    };
+
+    if (roleLevels[targetUser.role] >= roleLevels[currentUser.role] && currentUser.id !== id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Anda tidak bisa mengubah role user yang levelnya sama atau lebih tinggi'
       });
     }
     
@@ -101,8 +146,12 @@ exports.updateUserRole = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Role user berhasil diupdate',
-      data: result.rows[0]
+      message: `Role user berhasil diubah dari ${targetUser.role} menjadi ${role}`,
+      data: {
+        ...result.rows[0],
+        oldRole: targetUser.role,
+        newRole: role
+      }
     });
   } catch (error) {
     console.error('Update user role error:', error);

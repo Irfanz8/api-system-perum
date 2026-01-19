@@ -48,20 +48,22 @@ app.get('/', (req, res) => {
     message: 'API Sistem Pengelolaan Perumahan',
     version: '1.0.0',
     documentation: '/api-docs',
-    endpoints: {
-      auth: '/api/auth',
-      users: '/api/users',
-      keuangan: '/api/keuangan',
-      properti: '/api/properti',
-      persediaan: '/api/persediaan',
-      penjualan: '/api/penjualan'
-    }
+      endpoints: {
+        auth: '/api/auth',
+        users: '/api/users',
+        roles: '/api/roles',
+        keuangan: '/api/keuangan',
+        properti: '/api/properti',
+        persediaan: '/api/persediaan',
+        penjualan: '/api/penjualan'
+      }
   });
 });
 
 // Import routes
 const authRoutes = require('./src/routes/auth');
 const userRoutes = require('./src/routes/users');
+const roleRoutes = require('./src/routes/roles');
 const keuanganRoutes = require('./src/routes/keuangan');
 const propertiRoutes = require('./src/routes/properti');
 const persediaanRoutes = require('./src/routes/persediaan');
@@ -70,6 +72,7 @@ const penjualanRoutes = require('./src/routes/penjualan');
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/keuangan', keuanganRoutes);
 app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);
