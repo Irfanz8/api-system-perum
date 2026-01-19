@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/utils/swagger');
 require('dotenv').config();
 
 const app = express();
@@ -28,7 +30,9 @@ app.get('/', (req, res) => {
   res.json({
     message: 'API Sistem Pengelolaan Perumahan',
     version: '1.0.0',
+    documentation: '/api-docs',
     endpoints: {
+      auth: '/api/auth',
       keuangan: '/api/keuangan',
       properti: '/api/properti',
       persediaan: '/api/persediaan',
@@ -50,6 +54,9 @@ app.use('/api/keuangan', keuanganRoutes);
 app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);
 app.use('/api/penjualan', penjualanRoutes);
+
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

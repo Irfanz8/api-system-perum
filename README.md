@@ -97,6 +97,19 @@ npm start
 
 Server akan berjalan di `http://localhost:3000`
 
+## API Documentation (Swagger)
+
+Setelah server berjalan, Anda dapat mengakses dokumentasi API lengkap di:
+
+**Swagger UI**: http://localhost:3000/api-docs
+
+Dokumentasi Swagger menyediakan:
+- ✅ Dokumentasi lengkap semua endpoint
+- ✅ Try it out - test API langsung dari browser
+- ✅ Request/Response examples
+- ✅ Authentication dengan Bearer token
+- ✅ Schema definitions
+
 ## API Endpoints
 
 ### Authentication (/api/auth)
