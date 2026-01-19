@@ -67,7 +67,7 @@ exports.handleOAuthCallback = async (req, res) => {
     }
 
     // Simpan user ke database lokal jika belum ada
-    await saveUserToDatabase(user);
+    await saveUserToDatabase(user, 'oauth');
 
     res.json({
       success: true,
@@ -138,11 +138,21 @@ exports.signUp = async (req, res) => {
       });
     }
 
+    // Simpan user ke database lokal jika user sudah terverifikasi atau tidak perlu verifikasi
+    if (data.user) {
+      await saveUserToDatabase(data.user, 'email');
+    }
+
     res.status(201).json({
       success: true,
       message: 'Registrasi berhasil. Silakan cek email untuk verifikasi.',
       data: {
-        user: data.user
+        user: {
+          id: data.user?.id,
+          email: data.user?.email,
+          name: data.user?.user_metadata?.name || data.user?.email,
+          role: data.user?.user_metadata?.role || ROLES.USER
+        }
       }
     });
   } catch (error) {
@@ -181,7 +191,7 @@ exports.signIn = async (req, res) => {
     }
 
     // Simpan user ke database lokal jika belum ada
-    await saveUserToDatabase(data.user);
+    await saveUserToDatabase(data.user, 'email');
 
     res.json({
       success: true,
@@ -361,28 +371,65 @@ exports.updateProfile = async (req, res) => {
 
 /**
  * Fungsi helper untuk menyimpan user ke database lokal
+ * @param {Object} user - User object dari Supabase Auth
+ * @param {string} authMethod - 'email' untuk email/password, 'oauth' untuk OAuth
  */
-async function saveUserToDatabase(user) {
+async function saveUserToDatabase(user, authMethod = 'oauth') {
   try {
+    if (!user || !user.id) {
+      console.error('Invalid user object provided to saveUserToDatabase');
+      return;
+    }
+
     const checkQuery = 'SELECT id FROM users WHERE id = $1';
     const checkResult = await db.query(checkQuery, [user.id]);
 
+    const username = user.user_metadata?.name?.replace(/\s+/g, '_').toLowerCase() || user.email.split('@')[0];
+    const email = user.email;
+    const role = user.user_metadata?.role || ROLES.USER;
+    
+    // Password hash: null untuk email/password (di-handle Supabase), 'oauth' untuk OAuth
+    const passwordHash = authMethod === 'email' ? null : 'oauth';
+
     if (checkResult.rows.length === 0) {
+      // User baru, insert
       const insertQuery = `
         INSERT INTO users (id, username, email, password_hash, role)
         VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id) DO NOTHING
       `;
-      await db.query(insertQuery, [
+      const result = await db.query(insertQuery, [
         user.id,
-        user.user_metadata.name?.replace(/\s+/g, '_').toLowerCase() || user.email.split('@')[0],
-        user.email,
-        'oauth_user', // Placeholder karena password tidak tersedia untuk OAuth
-        user.user_metadata.role || ROLES.USER
+        username,
+        email,
+        passwordHash,
+        role
       ]);
-      console.log('User saved to local database:', user.email);
+      
+      if (result.rowCount > 0) {
+        console.log('✅ User saved to local database:', email, `(${authMethod})`);
+      }
+    } else {
+      // User sudah ada, update metadata jika perlu
+      const updateQuery = `
+        UPDATE users 
+        SET username = $1, 
+            email = $2, 
+            role = COALESCE($3, role),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4
+      `;
+      await db.query(updateQuery, [
+        username,
+        email,
+        role,
+        user.id
+      ]);
+      console.log('✅ User updated in local database:', email);
     }
   } catch (error) {
-    console.error('Error saving user to database:', error);
+    console.error('❌ Error saving user to database:', error.message);
+    console.error('User data:', { id: user?.id, email: user?.email });
     // Jangan throw error, biarkan flow berlanjut
   }
 }
