@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const keuanganController = require('../controllers/keuanganController');
+const { authenticateUser } = require('../middleware/auth');
+const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -32,11 +34,13 @@ const keuanganController = require('../controllers/keuanganController');
  *         name: limit
  *         schema:
  *           type: integer
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of transactions
  */
-router.get('/', keuanganController.getAllTransactions);
+router.get('/', authenticateUser, checkPermission('KEUNGAN_READ'), keuanganController.getAllTransactions);
 
 /**
  * @swagger
@@ -44,6 +48,8 @@ router.get('/', keuanganController.getAllTransactions);
  *   get:
  *     summary: Get financial summary
  *     tags: [Keuangan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: start_date
@@ -59,7 +65,7 @@ router.get('/', keuanganController.getAllTransactions);
  *       200:
  *         description: Financial summary
  */
-router.get('/summary', keuanganController.getFinancialSummary);
+router.get('/summary', authenticateUser, checkPermission('KEUNGAN_READ'), keuanganController.getFinancialSummary);
 
 /**
  * @swagger
@@ -67,6 +73,8 @@ router.get('/summary', keuanganController.getFinancialSummary);
  *   get:
  *     summary: Get transaction by ID
  *     tags: [Keuangan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -79,14 +87,16 @@ router.get('/summary', keuanganController.getFinancialSummary);
  *       404:
  *         description: Transaction not found
  */
-router.get('/:id', keuanganController.getTransactionById);
+router.get('/:id', authenticateUser, checkPermission('KEUNGAN_READ'), keuanganController.getTransactionById);
 
 /**
  * @swagger
  * /api/keuangan:
  *   post:
- *     summary: Create new financial transaction
+ *     summary: Create new financial transaction (Admin/Superadmin only)
  *     tags: [Keuangan]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -119,14 +129,16 @@ router.get('/:id', keuanganController.getTransactionById);
  *       201:
  *         description: Transaction created successfully
  */
-router.post('/', keuanganController.createTransaction);
+router.post('/', authenticateUser, checkPermission('KEUNGAN_CREATE'), keuanganController.createTransaction);
 
 /**
  * @swagger
  * /api/keuangan/{id}:
  *   put:
- *     summary: Update transaction
+ *     summary: Update transaction (Admin/Superadmin only)
  *     tags: [Keuangan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -158,14 +170,16 @@ router.post('/', keuanganController.createTransaction);
  *       200:
  *         description: Transaction updated successfully
  */
-router.put('/:id', keuanganController.updateTransaction);
+router.put('/:id', authenticateUser, checkPermission('KEUNGAN_UPDATE'), keuanganController.updateTransaction);
 
 /**
  * @swagger
  * /api/keuangan/{id}:
  *   delete:
- *     summary: Delete transaction
+ *     summary: Delete transaction (Admin/Superadmin only)
  *     tags: [Keuangan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -176,6 +190,6 @@ router.put('/:id', keuanganController.updateTransaction);
  *       200:
  *         description: Transaction deleted successfully
  */
-router.delete('/:id', keuanganController.deleteTransaction);
+router.delete('/:id', authenticateUser, checkPermission('KEUNGAN_DELETE'), keuanganController.deleteTransaction);
 
 module.exports = router;

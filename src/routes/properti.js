@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const propertiController = require('../controllers/propertiController');
 const penjualanController = require('../controllers/penjualanController');
+const { authenticateUser } = require('../middleware/auth');
+const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -27,11 +29,13 @@ const penjualanController = require('../controllers/penjualanController');
  *         name: max_price
  *         schema:
  *           type: number
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of properties
  */
-router.get('/', propertiController.getAllProperties);
+router.get('/', authenticateUser, checkPermission('PROPERTI_READ'), propertiController.getAllProperties);
 
 /**
  * @swagger
@@ -39,11 +43,13 @@ router.get('/', propertiController.getAllProperties);
  *   get:
  *     summary: Get available properties
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of available properties
  */
-router.get('/available', propertiController.getAvailableProperties);
+router.get('/available', authenticateUser, checkPermission('PROPERTI_READ'), propertiController.getAvailableProperties);
 
 /**
  * @swagger
@@ -51,11 +57,13 @@ router.get('/available', propertiController.getAvailableProperties);
  *   get:
  *     summary: Get property statistics
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Property statistics
  */
-router.get('/stats', propertiController.getPropertyStats);
+router.get('/stats', authenticateUser, checkPermission('PROPERTI_READ'), propertiController.getPropertyStats);
 
 /**
  * @swagger
@@ -63,6 +71,8 @@ router.get('/stats', propertiController.getPropertyStats);
  *   get:
  *     summary: Get property by ID
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -73,7 +83,7 @@ router.get('/stats', propertiController.getPropertyStats);
  *       200:
  *         description: Property details
  */
-router.get('/:id', propertiController.getPropertyById);
+router.get('/:id', authenticateUser, checkPermission('PROPERTI_READ'), propertiController.getPropertyById);
 
 /**
  * @swagger
@@ -81,6 +91,8 @@ router.get('/:id', propertiController.getPropertyById);
  *   get:
  *     summary: Get property sales history
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -91,14 +103,16 @@ router.get('/:id', propertiController.getPropertyById);
  *       200:
  *         description: Sales history
  */
-router.get('/:id/sales', propertiController.getPropertySalesHistory);
+router.get('/:id/sales', authenticateUser, checkPermission('PROPERTI_READ'), propertiController.getPropertySalesHistory);
 
 /**
  * @swagger
  * /api/properti:
  *   post:
- *     summary: Create new property
+ *     summary: Create new property (Admin/Superadmin only)
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -137,14 +151,16 @@ router.get('/:id/sales', propertiController.getPropertySalesHistory);
  *       201:
  *         description: Property created successfully
  */
-router.post('/', propertiController.createProperty);
+router.post('/', authenticateUser, checkPermission('PROPERTI_CREATE'), propertiController.createProperty);
 
 /**
  * @swagger
  * /api/properti/{id}:
  *   put:
- *     summary: Update property
+ *     summary: Update property (Admin/Superadmin only)
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -174,14 +190,16 @@ router.post('/', propertiController.createProperty);
  *       200:
  *         description: Property updated successfully
  */
-router.put('/:id', propertiController.updateProperty);
+router.put('/:id', authenticateUser, checkPermission('PROPERTI_UPDATE'), propertiController.updateProperty);
 
 /**
  * @swagger
  * /api/properti/{id}:
  *   delete:
- *     summary: Delete property
+ *     summary: Delete property (Admin/Superadmin only)
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -192,14 +210,16 @@ router.put('/:id', propertiController.updateProperty);
  *       200:
  *         description: Property deleted successfully
  */
-router.delete('/:id', propertiController.deleteProperty);
+router.delete('/:id', authenticateUser, checkPermission('PROPERTI_DELETE'), propertiController.deleteProperty);
 
 /**
  * @swagger
  * /api/properti/{id}/status:
  *   patch:
- *     summary: Update property status
+ *     summary: Update property status (Admin/Superadmin only)
  *     tags: [Properti]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -222,10 +242,10 @@ router.delete('/:id', propertiController.deleteProperty);
  *       200:
  *         description: Status updated successfully
  */
-router.patch('/:id/status', propertiController.updatePropertyStatus);
+router.patch('/:id/status', authenticateUser, checkPermission('PROPERTI_UPDATE_STATUS'), propertiController.updatePropertyStatus);
 
 // Property sales routes
-router.get('/:propertyId/sales', penjualanController.getAllSales);
-router.post('/:propertyId/sales', penjualanController.createSale);
+router.get('/:propertyId/sales', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getAllSales);
+router.post('/:propertyId/sales', authenticateUser, checkPermission('PENJUALAN_CREATE'), penjualanController.createSale);
 
 module.exports = router;

@@ -27,12 +27,27 @@ const authenticateUser = async (req, res, next) => {
       });
     }
 
+    // Get user role from database (lebih reliable)
+    const db = require('../config/database');
+    let userRole = user.user_metadata?.role || ROLES.USER;
+    
+    try {
+      const roleQuery = 'SELECT role FROM users WHERE id = $1';
+      const roleResult = await db.query(roleQuery, [user.id]);
+      if (roleResult.rows.length > 0 && roleResult.rows[0].role) {
+        userRole = roleResult.rows[0].role;
+      }
+    } catch (error) {
+      console.error('Error fetching user role from database:', error);
+      // Fallback ke user_metadata jika database error
+    }
+
     // Tambahkan user data ke request object
     req.user = {
       id: user.id,
       email: user.email,
-      role: user.user_metadata.role || ROLES.USER,
-      name: user.user_metadata.name || user.email
+      role: userRole,
+      name: user.user_metadata?.name || user.email
     };
 
     next();

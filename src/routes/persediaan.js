@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const persediaanController = require('../controllers/persediaanController');
+const { authenticateUser } = require('../middleware/auth');
+const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -21,11 +23,13 @@ const persediaanController = require('../controllers/persediaanController');
  *         name: low_stock
  *         schema:
  *           type: boolean
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of inventory items
  */
-router.get('/', persediaanController.getAllInventory);
+router.get('/', authenticateUser, checkPermission('PERSEDIAAN_READ'), persediaanController.getAllInventory);
 
 /**
  * @swagger
@@ -33,11 +37,13 @@ router.get('/', persediaanController.getAllInventory);
  *   get:
  *     summary: Get low stock items
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of items with low stock
  */
-router.get('/low-stock', persediaanController.getLowStockItems);
+router.get('/low-stock', authenticateUser, checkPermission('PERSEDIAAN_READ'), persediaanController.getLowStockItems);
 
 /**
  * @swagger
@@ -45,11 +51,13 @@ router.get('/low-stock', persediaanController.getLowStockItems);
  *   get:
  *     summary: Get inventory statistics
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Inventory statistics
  */
-router.get('/stats', persediaanController.getInventoryStats);
+router.get('/stats', authenticateUser, checkPermission('PERSEDIAAN_READ'), persediaanController.getInventoryStats);
 
 /**
  * @swagger
@@ -57,6 +65,8 @@ router.get('/stats', persediaanController.getInventoryStats);
  *   get:
  *     summary: Get inventory item by ID
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -67,7 +77,7 @@ router.get('/stats', persediaanController.getInventoryStats);
  *       200:
  *         description: Inventory item details
  */
-router.get('/:id', persediaanController.getInventoryById);
+router.get('/:id', authenticateUser, checkPermission('PERSEDIAAN_READ'), persediaanController.getInventoryById);
 
 /**
  * @swagger
@@ -75,6 +85,8 @@ router.get('/:id', persediaanController.getInventoryById);
  *   get:
  *     summary: Get inventory transaction history
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -85,14 +97,16 @@ router.get('/:id', persediaanController.getInventoryById);
  *       200:
  *         description: Transaction history
  */
-router.get('/:id/history', persediaanController.getInventoryTransactionHistory);
+router.get('/:id/history', authenticateUser, checkPermission('PERSEDIAAN_READ'), persediaanController.getInventoryTransactionHistory);
 
 /**
  * @swagger
  * /api/persediaan:
  *   post:
- *     summary: Create new inventory item
+ *     summary: Create new inventory item (Admin/Superadmin only)
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -127,14 +141,16 @@ router.get('/:id/history', persediaanController.getInventoryTransactionHistory);
  *       201:
  *         description: Inventory item created successfully
  */
-router.post('/', persediaanController.createInventory);
+router.post('/', authenticateUser, checkPermission('PERSEDIAAN_CREATE'), persediaanController.createInventory);
 
 /**
  * @swagger
  * /api/persediaan/{id}:
  *   put:
- *     summary: Update inventory item
+ *     summary: Update inventory item (Admin/Superadmin only)
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -160,14 +176,16 @@ router.post('/', persediaanController.createInventory);
  *       200:
  *         description: Inventory item updated successfully
  */
-router.put('/:id', persediaanController.updateInventory);
+router.put('/:id', authenticateUser, checkPermission('PERSEDIAAN_UPDATE'), persediaanController.updateInventory);
 
 /**
  * @swagger
  * /api/persediaan/{id}:
  *   delete:
- *     summary: Delete inventory item
+ *     summary: Delete inventory item (Admin/Superadmin only)
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -178,14 +196,16 @@ router.put('/:id', persediaanController.updateInventory);
  *       200:
  *         description: Inventory item deleted successfully
  */
-router.delete('/:id', persediaanController.deleteInventory);
+router.delete('/:id', authenticateUser, checkPermission('PERSEDIAAN_DELETE'), persediaanController.deleteInventory);
 
 /**
  * @swagger
  * /api/persediaan/{id}/quantity:
  *   patch:
- *     summary: Update inventory quantity
+ *     summary: Update inventory quantity (Admin/Superadmin only)
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -207,14 +227,16 @@ router.delete('/:id', persediaanController.deleteInventory);
  *       200:
  *         description: Quantity updated successfully
  */
-router.patch('/:id/quantity', persediaanController.updateInventoryQuantity);
+router.patch('/:id/quantity', authenticateUser, checkPermission('PERSEDIAAN_UPDATE'), persediaanController.updateInventoryQuantity);
 
 /**
  * @swagger
  * /api/persediaan/{id}/transaction:
  *   post:
- *     summary: Add inventory transaction (in/out)
+ *     summary: Add inventory transaction (in/out) (Admin/Superadmin only)
  *     tags: [Persediaan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -245,6 +267,6 @@ router.patch('/:id/quantity', persediaanController.updateInventoryQuantity);
  *       201:
  *         description: Transaction added successfully
  */
-router.post('/:id/transaction', persediaanController.addInventoryTransaction);
+router.post('/:id/transaction', authenticateUser, checkPermission('PERSEDIAAN_TRANSACTION'), persediaanController.addInventoryTransaction);
 
 module.exports = router;

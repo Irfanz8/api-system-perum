@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const penjualanController = require('../controllers/penjualanController');
+const { authenticateUser } = require('../middleware/auth');
+const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -28,11 +30,13 @@ const penjualanController = require('../controllers/penjualanController');
  *         schema:
  *           type: string
  *           format: date
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of sales
  */
-router.get('/', penjualanController.getAllSales);
+router.get('/', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getAllSales);
 
 /**
  * @swagger
@@ -40,6 +44,8 @@ router.get('/', penjualanController.getAllSales);
  *   get:
  *     summary: Get sales statistics
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: start_date
@@ -55,7 +61,7 @@ router.get('/', penjualanController.getAllSales);
  *       200:
  *         description: Sales statistics
  */
-router.get('/stats', penjualanController.getSalesStats);
+router.get('/stats', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getSalesStats);
 
 /**
  * @swagger
@@ -63,6 +69,8 @@ router.get('/stats', penjualanController.getSalesStats);
  *   get:
  *     summary: Get monthly revenue for a year
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: year
@@ -74,7 +82,7 @@ router.get('/stats', penjualanController.getSalesStats);
  *       200:
  *         description: Monthly revenue data
  */
-router.get('/revenue/:year', penjualanController.getMonthlyRevenue);
+router.get('/revenue/:year', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getMonthlyRevenue);
 
 /**
  * @swagger
@@ -82,6 +90,8 @@ router.get('/revenue/:year', penjualanController.getMonthlyRevenue);
  *   get:
  *     summary: Get sale by ID
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -92,14 +102,16 @@ router.get('/revenue/:year', penjualanController.getMonthlyRevenue);
  *       200:
  *         description: Sale details
  */
-router.get('/:id', penjualanController.getSaleById);
+router.get('/:id', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getSaleById);
 
 /**
  * @swagger
  * /api/penjualan:
  *   post:
- *     summary: Create new property sale
+ *     summary: Create new property sale (Admin/Superadmin only)
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -135,14 +147,16 @@ router.get('/:id', penjualanController.getSaleById);
  *       201:
  *         description: Sale created successfully
  */
-router.post('/', penjualanController.createSale);
+router.post('/', authenticateUser, checkPermission('PENJUALAN_CREATE'), penjualanController.createSale);
 
 /**
  * @swagger
  * /api/penjualan/{id}:
  *   put:
- *     summary: Update sale
+ *     summary: Update sale (Admin/Superadmin only)
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -171,14 +185,16 @@ router.post('/', penjualanController.createSale);
  *       200:
  *         description: Sale updated successfully
  */
-router.put('/:id', penjualanController.updateSale);
+router.put('/:id', authenticateUser, checkPermission('PENJUALAN_UPDATE'), penjualanController.updateSale);
 
 /**
  * @swagger
  * /api/penjualan/{id}:
  *   delete:
- *     summary: Delete sale
+ *     summary: Delete sale (Admin/Superadmin only)
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -189,14 +205,16 @@ router.put('/:id', penjualanController.updateSale);
  *       200:
  *         description: Sale deleted successfully
  */
-router.delete('/:id', penjualanController.deleteSale);
+router.delete('/:id', authenticateUser, checkPermission('PENJUALAN_DELETE'), penjualanController.deleteSale);
 
 /**
  * @swagger
  * /api/penjualan/{id}/status:
  *   patch:
- *     summary: Update sale status
+ *     summary: Update sale status (Admin/Superadmin only)
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -219,14 +237,16 @@ router.delete('/:id', penjualanController.deleteSale);
  *       200:
  *         description: Status updated successfully
  */
-router.patch('/:id/status', penjualanController.updateSaleStatus);
+router.patch('/:id/status', authenticateUser, checkPermission('PENJUALAN_UPDATE'), penjualanController.updateSaleStatus);
 
 /**
  * @swagger
  * /api/penjualan/{id}/complete:
  *   post:
- *     summary: Complete sale (creates financial transaction and updates property status)
+ *     summary: Complete sale (creates financial transaction and updates property status) (Admin/Superadmin only)
  *     tags: [Penjualan]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -237,6 +257,6 @@ router.patch('/:id/status', penjualanController.updateSaleStatus);
  *       200:
  *         description: Sale completed successfully
  */
-router.post('/:id/complete', penjualanController.completeSale);
+router.post('/:id/complete', authenticateUser, checkPermission('PENJUALAN_COMPLETE'), penjualanController.completeSale);
 
 module.exports = router;
