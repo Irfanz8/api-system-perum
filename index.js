@@ -26,8 +26,13 @@ app.use(cors({
 }));
 
 app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+
+// JSON parser with better error handling
+app.use(express.json({ 
+  limit: '10mb',
+  strict: false // Allow non-strict JSON
+}));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -85,8 +90,20 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOpti
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error('Error:', err);
+  console.error('Stack:', err.stack);
+  
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError || (err.status === 400 && 'body' in err)) {
+    return res.status(400).json({
+      error: 'Invalid JSON',
+      message: 'The request body contains invalid JSON. Please check for unescaped control characters (like newlines or tabs) or malformed JSON syntax.',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+  
+  // Handle other errors
+  res.status(err.status || 500).json({
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
