@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const db = require('../config/database');
+const { ROLES, isValidRole } = require('../utils/roles');
 
 /**
  * Get OAuth URL untuk berbagai provider
@@ -75,7 +76,7 @@ exports.handleOAuthCallback = async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.user_metadata.name || user.email,
-          role: user.user_metadata.role || 'user',
+          role: user.user_metadata.role || ROLES.USER,
           avatar: user.user_metadata.avatar_url
         },
         session: {
@@ -98,7 +99,7 @@ exports.handleOAuthCallback = async (req, res) => {
  */
 exports.signUp = async (req, res) => {
   try {
-    const { email, password, name, role = 'user' } = req.body;
+    const { email, password, name, role = ROLES.USER } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -107,13 +108,25 @@ exports.signUp = async (req, res) => {
       });
     }
 
+    // Validasi role
+    if (!isValidRole(role)) {
+      return res.status(400).json({
+        success: false,
+        error: `Role tidak valid. Role yang tersedia: ${Object.values(ROLES).join(', ')}`
+      });
+    }
+
+    // Hanya superadmin yang bisa membuat admin atau superadmin baru
+    // Untuk sekarang, default semua user baru adalah 'user'
+    const finalRole = role === ROLES.USER ? ROLES.USER : ROLES.USER;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name,
-          role
+          role: finalRole
         }
       }
     });
@@ -178,7 +191,7 @@ exports.signIn = async (req, res) => {
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata.name || data.user.email,
-          role: data.user.user_metadata.role || 'user',
+          role: data.user.user_metadata.role || ROLES.USER,
           avatar: data.user.user_metadata.avatar_url
         },
         session: {
@@ -292,10 +305,29 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, role } = req.body;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     const updates = {};
     if (name) updates.name = name;
-    if (role) updates.role = role;
+    
+    // Hanya superadmin yang bisa mengubah role
+    if (role) {
+      if (userRole !== ROLES.SUPERADMIN) {
+        return res.status(403).json({
+          success: false,
+          error: 'Hanya superadmin yang dapat mengubah role user'
+        });
+      }
+      
+      if (!isValidRole(role)) {
+        return res.status(400).json({
+          success: false,
+          error: `Role tidak valid. Role yang tersedia: ${Object.values(ROLES).join(', ')}`
+        });
+      }
+      
+      updates.role = role;
+    }
 
     const { data, error } = await supabase.auth.updateUser({
       data: updates
@@ -315,7 +347,7 @@ exports.updateProfile = async (req, res) => {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata.name || data.user.email,
-        role: data.user.user_metadata.role || 'user'
+        role: data.user.user_metadata.role || ROLES.USER
       }
     });
   } catch (error) {
@@ -345,7 +377,7 @@ async function saveUserToDatabase(user) {
         user.user_metadata.name?.replace(/\s+/g, '_').toLowerCase() || user.email.split('@')[0],
         user.email,
         'oauth_user', // Placeholder karena password tidak tersedia untuk OAuth
-        user.user_metadata.role || 'user'
+        user.user_metadata.role || ROLES.USER
       ]);
       console.log('User saved to local database:', user.email);
     }

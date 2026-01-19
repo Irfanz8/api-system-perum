@@ -33,6 +33,7 @@ app.get('/', (req, res) => {
     documentation: '/api-docs',
     endpoints: {
       auth: '/api/auth',
+      users: '/api/users',
       keuangan: '/api/keuangan',
       properti: '/api/properti',
       persediaan: '/api/persediaan',
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
 
 // Import routes
 const authRoutes = require('./src/routes/auth');
+const userRoutes = require('./src/routes/users');
 const keuanganRoutes = require('./src/routes/keuangan');
 const propertiRoutes = require('./src/routes/properti');
 const persediaanRoutes = require('./src/routes/persediaan');
@@ -50,6 +52,7 @@ const penjualanRoutes = require('./src/routes/penjualan');
 
 // Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/keuangan', keuanganRoutes);
 app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);

@@ -93,7 +93,7 @@ router.post('/callback', authController.handleOAuthCallback);
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [user, admin]
+ *                 enum: [user, admin, superadmin]
  *                 default: user
  *     responses:
  *       201:
@@ -255,7 +255,7 @@ router.get('/profile', authenticateUser, authController.getProfile);
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [user, admin]
+ *                 enum: [user, admin, superadmin]
  *     responses:
  *       200:
  *         description: Profile berhasil diupdate

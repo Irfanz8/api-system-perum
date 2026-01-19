@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { ROLES } = require('../utils/roles');
 
 /**
  * Middleware untuk memverifikasi JWT token dari Supabase
@@ -30,7 +31,7 @@ const authenticateUser = async (req, res, next) => {
     req.user = {
       id: user.id,
       email: user.email,
-      role: user.user_metadata.role || 'user',
+      role: user.user_metadata.role || ROLES.USER,
       name: user.user_metadata.name || user.email
     };
 
@@ -68,12 +69,18 @@ const authorizeRoles = (...roles) => {
 };
 
 /**
- * Middleware untuk memeriksa apakah user adalah admin
+ * Middleware untuk memeriksa apakah user adalah admin (admin atau superadmin)
  */
-const isAdmin = authorizeRoles('admin', 'superadmin');
+const isAdmin = authorizeRoles(ROLES.ADMIN, ROLES.SUPERADMIN);
+
+/**
+ * Middleware untuk memeriksa apakah user adalah superadmin
+ */
+const isSuperAdmin = authorizeRoles(ROLES.SUPERADMIN);
 
 module.exports = {
   authenticateUser,
   authorizeRoles,
-  isAdmin
+  isAdmin,
+  isSuperAdmin
 };
