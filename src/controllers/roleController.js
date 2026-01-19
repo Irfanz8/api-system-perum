@@ -396,6 +396,147 @@ exports.getRoleStatistics = async (req, res) => {
 };
 
 /**
+ * Get feature access untuk suatu role (dengan detail endpoint)
+ */
+exports.getRoleFeatureAccess = async (req, res) => {
+  try {
+    const { role } = req.params;
+
+    if (!isValidRole(role)) {
+      return res.status(400).json({
+        success: false,
+        error: `Role tidak valid. Role yang tersedia: ${Object.values(ROLES).join(', ')}`
+      });
+    }
+
+    const permissions = getRolePermissions(role);
+    
+    // Group permissions by feature/module
+    const featureAccess = {
+      users: {
+        name: 'User Management',
+        endpoints: [
+          { method: 'GET', path: '/api/users', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'GET', path: '/api/users/:id', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'PATCH', path: '/api/users/:id/role', permission: 'USERS_UPDATE_ROLE', allowed: permissions.includes('USERS_UPDATE_ROLE') },
+          { method: 'DELETE', path: '/api/users/:id', permission: 'USERS_DELETE', allowed: permissions.includes('USERS_DELETE') }
+        ],
+        canAccess: permissions.includes('USERS_READ')
+      },
+      keuangan: {
+        name: 'Financial Transactions',
+        endpoints: [
+          { method: 'GET', path: '/api/keuangan', permission: 'KEUNGAN_READ', allowed: permissions.includes('KEUNGAN_READ') },
+          { method: 'GET', path: '/api/keuangan/summary', permission: 'KEUNGAN_READ', allowed: permissions.includes('KEUNGAN_READ') },
+          { method: 'GET', path: '/api/keuangan/:id', permission: 'KEUNGAN_READ', allowed: permissions.includes('KEUNGAN_READ') },
+          { method: 'POST', path: '/api/keuangan', permission: 'KEUNGAN_CREATE', allowed: permissions.includes('KEUNGAN_CREATE') },
+          { method: 'PUT', path: '/api/keuangan/:id', permission: 'KEUNGAN_UPDATE', allowed: permissions.includes('KEUNGAN_UPDATE') },
+          { method: 'DELETE', path: '/api/keuangan/:id', permission: 'KEUNGAN_DELETE', allowed: permissions.includes('KEUNGAN_DELETE') }
+        ],
+        canAccess: permissions.includes('KEUNGAN_READ'),
+        canCreate: permissions.includes('KEUNGAN_CREATE'),
+        canUpdate: permissions.includes('KEUNGAN_UPDATE'),
+        canDelete: permissions.includes('KEUNGAN_DELETE')
+      },
+      properti: {
+        name: 'Properties',
+        endpoints: [
+          { method: 'GET', path: '/api/properti', permission: 'PROPERTI_READ', allowed: permissions.includes('PROPERTI_READ') },
+          { method: 'GET', path: '/api/properti/available', permission: 'PROPERTI_READ', allowed: permissions.includes('PROPERTI_READ') },
+          { method: 'GET', path: '/api/properti/stats', permission: 'PROPERTI_READ', allowed: permissions.includes('PROPERTI_READ') },
+          { method: 'GET', path: '/api/properti/:id', permission: 'PROPERTI_READ', allowed: permissions.includes('PROPERTI_READ') },
+          { method: 'POST', path: '/api/properti', permission: 'PROPERTI_CREATE', allowed: permissions.includes('PROPERTI_CREATE') },
+          { method: 'PUT', path: '/api/properti/:id', permission: 'PROPERTI_UPDATE', allowed: permissions.includes('PROPERTI_UPDATE') },
+          { method: 'DELETE', path: '/api/properti/:id', permission: 'PROPERTI_DELETE', allowed: permissions.includes('PROPERTI_DELETE') },
+          { method: 'PATCH', path: '/api/properti/:id/status', permission: 'PROPERTI_UPDATE_STATUS', allowed: permissions.includes('PROPERTI_UPDATE_STATUS') }
+        ],
+        canAccess: permissions.includes('PROPERTI_READ'),
+        canCreate: permissions.includes('PROPERTI_CREATE'),
+        canUpdate: permissions.includes('PROPERTI_UPDATE'),
+        canDelete: permissions.includes('PROPERTI_DELETE')
+      },
+      persediaan: {
+        name: 'Inventory',
+        endpoints: [
+          { method: 'GET', path: '/api/persediaan', permission: 'PERSEDIAAN_READ', allowed: permissions.includes('PERSEDIAAN_READ') },
+          { method: 'GET', path: '/api/persediaan/low-stock', permission: 'PERSEDIAAN_READ', allowed: permissions.includes('PERSEDIAAN_READ') },
+          { method: 'GET', path: '/api/persediaan/stats', permission: 'PERSEDIAAN_READ', allowed: permissions.includes('PERSEDIAAN_READ') },
+          { method: 'GET', path: '/api/persediaan/:id', permission: 'PERSEDIAAN_READ', allowed: permissions.includes('PERSEDIAAN_READ') },
+          { method: 'POST', path: '/api/persediaan', permission: 'PERSEDIAAN_CREATE', allowed: permissions.includes('PERSEDIAAN_CREATE') },
+          { method: 'PUT', path: '/api/persediaan/:id', permission: 'PERSEDIAAN_UPDATE', allowed: permissions.includes('PERSEDIAAN_UPDATE') },
+          { method: 'DELETE', path: '/api/persediaan/:id', permission: 'PERSEDIAAN_DELETE', allowed: permissions.includes('PERSEDIAAN_DELETE') },
+          { method: 'POST', path: '/api/persediaan/:id/transaction', permission: 'PERSEDIAAN_TRANSACTION', allowed: permissions.includes('PERSEDIAAN_TRANSACTION') }
+        ],
+        canAccess: permissions.includes('PERSEDIAAN_READ'),
+        canCreate: permissions.includes('PERSEDIAAN_CREATE'),
+        canUpdate: permissions.includes('PERSEDIAAN_UPDATE'),
+        canDelete: permissions.includes('PERSEDIAAN_DELETE')
+      },
+      penjualan: {
+        name: 'Property Sales',
+        endpoints: [
+          { method: 'GET', path: '/api/penjualan', permission: 'PENJUALAN_READ', allowed: permissions.includes('PENJUALAN_READ') },
+          { method: 'GET', path: '/api/penjualan/stats', permission: 'PENJUALAN_READ', allowed: permissions.includes('PENJUALAN_READ') },
+          { method: 'GET', path: '/api/penjualan/revenue/:year', permission: 'PENJUALAN_READ', allowed: permissions.includes('PENJUALAN_READ') },
+          { method: 'GET', path: '/api/penjualan/:id', permission: 'PENJUALAN_READ', allowed: permissions.includes('PENJUALAN_READ') },
+          { method: 'POST', path: '/api/penjualan', permission: 'PENJUALAN_CREATE', allowed: permissions.includes('PENJUALAN_CREATE') },
+          { method: 'PUT', path: '/api/penjualan/:id', permission: 'PENJUALAN_UPDATE', allowed: permissions.includes('PENJUALAN_UPDATE') },
+          { method: 'DELETE', path: '/api/penjualan/:id', permission: 'PENJUALAN_DELETE', allowed: permissions.includes('PENJUALAN_DELETE') },
+          { method: 'POST', path: '/api/penjualan/:id/complete', permission: 'PENJUALAN_COMPLETE', allowed: permissions.includes('PENJUALAN_COMPLETE') }
+        ],
+        canAccess: permissions.includes('PENJUALAN_READ'),
+        canCreate: permissions.includes('PENJUALAN_CREATE'),
+        canUpdate: permissions.includes('PENJUALAN_UPDATE'),
+        canDelete: permissions.includes('PENJUALAN_DELETE')
+      },
+      roles: {
+        name: 'Role Management',
+        endpoints: [
+          { method: 'GET', path: '/api/roles/hierarchy', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'GET', path: '/api/roles/:role/permissions', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'GET', path: '/api/roles/permissions/matrix', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'GET', path: '/api/roles/users', permission: 'USERS_READ', allowed: permissions.includes('USERS_READ') },
+          { method: 'PATCH', path: '/api/roles/users/:id/role', permission: 'USERS_UPDATE_ROLE', allowed: permissions.includes('USERS_UPDATE_ROLE') }
+        ],
+        canAccess: permissions.includes('USERS_READ')
+      }
+    };
+
+    // Calculate summary
+    const summary = {
+      totalFeatures: Object.keys(featureAccess).length,
+      accessibleFeatures: Object.values(featureAccess).filter(f => f.canAccess).length,
+      totalEndpoints: Object.values(featureAccess).reduce((sum, f) => sum + f.endpoints.length, 0),
+      accessibleEndpoints: Object.values(featureAccess).reduce((sum, f) => sum + f.endpoints.filter(e => e.allowed).length, 0),
+      canCreate: Object.values(featureAccess).some(f => f.canCreate),
+      canUpdate: Object.values(featureAccess).some(f => f.canUpdate),
+      canDelete: Object.values(featureAccess).some(f => f.canDelete)
+    };
+
+    res.json({
+      success: true,
+      role,
+      summary,
+      featureAccess,
+      permissions: {
+        list: permissions,
+        count: permissions.length,
+        details: permissions.map(p => ({
+          permission: p,
+          description: getPermissionDescription(p)
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Get role feature access error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get role feature access'
+    });
+  }
+};
+
+/**
  * Helper function untuk mendapatkan deskripsi permission
  */
 function getPermissionDescription(permission) {

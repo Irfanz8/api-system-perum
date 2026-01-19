@@ -157,4 +157,25 @@ router.patch('/users/:id/role', authenticateUser, isSuperAdmin, roleController.u
  */
 router.get('/statistics', authenticateUser, isSuperAdmin, roleController.getRoleStatistics);
 
+/**
+ * @swagger
+ * /api/roles/{role}/features:
+ *   get:
+ *     summary: Get feature access untuk suatu role dengan detail endpoint (Superadmin only)
+ *     tags: [Role Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: role
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [user, admin, superadmin]
+ *     responses:
+ *       200:
+ *         description: Feature access details for the role
+ */
+router.get('/:role/features', authenticateUser, isSuperAdmin, roleController.getRoleFeatureAccess);
+
 module.exports = router;
