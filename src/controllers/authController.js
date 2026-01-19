@@ -127,14 +127,16 @@ exports.signUp = async (req, res) => {
         data: {
           name,
           role: finalRole
-        }
+        },
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`
       }
     });
 
     if (error) {
+      console.error('Signup error:', error);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: error.message || 'Gagal melakukan registrasi'
       });
     }
 
@@ -143,16 +145,26 @@ exports.signUp = async (req, res) => {
       await saveUserToDatabase(data.user, 'email');
     }
 
+    // Cek apakah email perlu diverifikasi
+    const needsVerification = data.user && !data.session;
+    
     res.status(201).json({
       success: true,
-      message: 'Registrasi berhasil. Silakan cek email untuk verifikasi.',
+      message: needsVerification 
+        ? 'Registrasi berhasil. Silakan cek email untuk verifikasi sebelum login.'
+        : 'Registrasi berhasil. Anda sudah bisa login.',
+      needsEmailVerification: needsVerification,
       data: {
         user: {
           id: data.user?.id,
           email: data.user?.email,
           name: data.user?.user_metadata?.name || data.user?.email,
           role: data.user?.user_metadata?.role || ROLES.USER
-        }
+        },
+        session: data.session ? {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        } : null
       }
     });
   } catch (error) {
@@ -184,9 +196,25 @@ exports.signIn = async (req, res) => {
     });
 
     if (error) {
+      console.error('Signin error:', error);
+      
+      // Berikan error message yang lebih spesifik
+      let errorMessage = 'Email atau password salah';
+      
+      if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+        errorMessage = 'Email belum diverifikasi. Silakan cek email Anda untuk link verifikasi.';
+      } else if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Email atau password salah';
+      } else if (error.message.includes('User not found')) {
+        errorMessage = 'User tidak ditemukan. Silakan daftar terlebih dahulu.';
+      } else {
+        errorMessage = error.message || 'Gagal melakukan login';
+      }
+      
       return res.status(401).json({
         success: false,
-        error: 'Email atau password salah'
+        error: errorMessage,
+        code: error.status || 'AUTH_ERROR'
       });
     }
 
@@ -468,6 +496,48 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Reset password failed'
+    });
+  }
+};
+
+/**
+ * Resend verification email
+ */
+exports.resendVerificationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email wajib diisi'
+      });
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`
+      }
+    });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Gagal mengirim email verifikasi'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Email verifikasi telah dikirim ulang. Silakan cek email Anda.'
+    });
+  } catch (error) {
+    console.error('Resend verification email error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengirim email verifikasi'
     });
   }
 };

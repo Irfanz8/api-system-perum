@@ -185,6 +185,30 @@ router.post('/reset-password', authController.resetPassword);
 
 /**
  * @swagger
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Resend verification email
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Email verifikasi berhasil dikirim ulang
+ */
+router.post('/resend-verification', authController.resendVerificationEmail);
+
+/**
+ * @swagger
  * /api/auth/refresh-token:
  *   post:
  *     summary: Refresh access token
