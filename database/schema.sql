@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
     description TEXT,
     transaction_date DATE NOT NULL,
     property_id INTEGER REFERENCES properties(id),
-    created_by INTEGER REFERENCES users(id),
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     quantity INTEGER NOT NULL,
     description TEXT,
     transaction_date DATE NOT NULL,
-    created_by INTEGER REFERENCES users(id),
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS property_sales (
     sale_date DATE NOT NULL,
     status VARCHAR(20) DEFAULT 'pending', -- pending, completed, cancelled
     notes TEXT,
-    created_by INTEGER REFERENCES users(id),
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
