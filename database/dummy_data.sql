@@ -5,29 +5,24 @@
 -- ============================================
 -- USERS (Sample Users)
 -- ============================================
--- IMPORTANT: Ganti UUID di bawah dengan UUID user yang sebenarnya dari Supabase Auth!
--- Cara mendapatkan UUID:
--- 1. Buka Supabase Dashboard → Authentication → Users
--- 2. Copy UUID dari user yang ingin digunakan
--- 3. Ganti UUID di bawah dengan UUID yang sebenarnya
+-- PENTING: Users TIDAK bisa di-insert langsung karena ada foreign key ke auth.users
 -- 
--- Atau buat user baru di Supabase Auth terlebih dahulu, lalu gunakan UUID-nya di sini
-
--- Contoh (GANTI dengan UUID yang sebenarnya):
+-- LANGKAH 1: Buat user di Supabase Auth terlebih dahulu:
+--   1. Buka Supabase Dashboard → Authentication → Users
+--   2. Klik "Add User" atau signup via API
+--   3. Buat user dengan email: admin@perumahan.com, manager@perumahan.com, dll
+--   4. Copy UUID dari setiap user yang dibuat
+--
+-- LANGKAH 2: Setelah user dibuat, uncomment dan ganti UUID di bawah:
+--
 -- INSERT INTO users (id, username, email, password_hash, role) VALUES
--- ('YOUR-ADMIN-UUID-HERE', 'admin', 'admin@perumahan.com', NULL, 'superadmin'),
--- ('YOUR-MANAGER-UUID-HERE', 'manager', 'manager@perumahan.com', NULL, 'admin'),
--- ('YOUR-STAFF1-UUID-HERE', 'staff1', 'staff1@perumahan.com', NULL, 'user'),
--- ('YOUR-STAFF2-UUID-HERE', 'staff2', 'staff2@perumahan.com', NULL, 'user')
+-- ('YOUR-ADMIN-UUID-FROM-SUPABASE', 'admin', 'admin@perumahan.com', NULL, 'superadmin'),
+-- ('YOUR-MANAGER-UUID-FROM-SUPABASE', 'manager', 'manager@perumahan.com', NULL, 'admin'),
+-- ('YOUR-STAFF1-UUID-FROM-SUPABASE', 'staff1', 'staff1@perumahan.com', NULL, 'user'),
+-- ('YOUR-STAFF2-UUID-FROM-SUPABASE', 'staff2', 'staff2@perumahan.com', NULL, 'user')
 -- ON CONFLICT (id) DO NOTHING;
-
--- Untuk testing, gunakan UUID dummy (pastikan user sudah dibuat di Supabase Auth dengan UUID yang sama):
-INSERT INTO users (id, username, email, password_hash, role) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin', 'admin@perumahan.com', NULL, 'superadmin'),
-('00000000-0000-0000-0000-000000000002', 'manager', 'manager@perumahan.com', NULL, 'admin'),
-('00000000-0000-0000-0000-000000000003', 'staff1', 'staff1@perumahan.com', NULL, 'user'),
-('00000000-0000-0000-0000-000000000004', 'staff2', 'staff2@perumahan.com', NULL, 'user')
-ON CONFLICT (id) DO NOTHING;
+--
+-- ATAU gunakan script create_users.sql untuk membuat user via API terlebih dahulu
 
 -- ============================================
 -- PROPERTIES (Sample Properties)
@@ -46,20 +41,23 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- FINANCIAL TRANSACTIONS (Sample Transactions)
 -- ============================================
+-- CATATAN: created_by harus UUID user yang valid dari Supabase Auth
+-- Ganti UUID di bawah dengan UUID user yang sebenarnya, atau set NULL untuk testing
+
 -- Income transactions
 INSERT INTO financial_transactions (type, category, amount, description, transaction_date, property_id, created_by) VALUES
-('income', 'penjualan', 650000000, 'Penjualan Rumah Type 60 Blok B No. 1', '2024-01-15', 3, '00000000-0000-0000-0000-000000000001'),
-('income', 'penjualan', 350000000, 'DP Penjualan Rumah Type 36 Premium', '2024-01-20', 6, '00000000-0000-0000-0000-000000000002'),
-('income', 'sewa', 5000000, 'Pendapatan sewa ruko bulan Januari', '2024-01-01', 4, '00000000-0000-0000-0000-000000000001'),
-('income', 'lainnya', 2000000, 'Pendapatan dari jasa konsultasi', '2024-01-10', NULL, '00000000-0000-0000-0000-000000000002'),
+('income', 'penjualan', 650000000, 'Penjualan Rumah Type 60 Blok B No. 1', '2024-01-15', 3, NULL),
+('income', 'penjualan', 350000000, 'DP Penjualan Rumah Type 36 Premium', '2024-01-20', 6, NULL),
+('income', 'sewa', 5000000, 'Pendapatan sewa ruko bulan Januari', '2024-01-01', 4, NULL),
+('income', 'lainnya', 2000000, 'Pendapatan dari jasa konsultasi', '2024-01-10', NULL, NULL),
 
 -- Expense transactions
-('expense', 'biaya_operasional', 15000000, 'Biaya listrik, air, dan internet bulan Januari', '2024-01-05', NULL, '00000000-0000-0000-0000-000000000001'),
-('expense', 'gaji', 5000000, 'Gaji staff bulan Januari', '2024-01-01', NULL, '00000000-0000-0000-0000-000000000001'),
-('expense', 'pemeliharaan', 3000000, 'Perbaikan atap dan cat rumah', '2024-01-12', 1, '00000000-0000-0000-0000-000000000002'),
-('expense', 'marketing', 5000000, 'Biaya iklan dan promosi', '2024-01-08', NULL, '00000000-0000-0000-0000-000000000002'),
-('expense', 'pajak', 2000000, 'Pajak properti bulan Januari', '2024-01-15', 1, '00000000-0000-0000-0000-000000000001'),
-('expense', 'biaya_operasional', 8000000, 'Biaya keamanan dan kebersihan', '2024-01-10', NULL, '00000000-0000-0000-0000-000000000001')
+('expense', 'biaya_operasional', 15000000, 'Biaya listrik, air, dan internet bulan Januari', '2024-01-05', NULL, NULL),
+('expense', 'gaji', 5000000, 'Gaji staff bulan Januari', '2024-01-01', NULL, NULL),
+('expense', 'pemeliharaan', 3000000, 'Perbaikan atap dan cat rumah', '2024-01-12', 1, NULL),
+('expense', 'marketing', 5000000, 'Biaya iklan dan promosi', '2024-01-08', NULL, NULL),
+('expense', 'pajak', 2000000, 'Pajak properti bulan Januari', '2024-01-15', 1, NULL),
+('expense', 'biaya_operasional', 8000000, 'Biaya keamanan dan kebersihan', '2024-01-10', NULL, NULL)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
@@ -84,30 +82,34 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- INVENTORY TRANSACTIONS (Sample Transactions)
 -- ============================================
-INSERT INTO inventory_transactions (inventory_id, type, quantity, description, transaction_date, created_by) VALUES
+-- CATATAN: created_by bisa NULL untuk testing, atau ganti dengan UUID user yang valid
+
 -- Stock in (pembelian)
-(1, 'in', 50, 'Pembelian semen untuk proyek rumah Type 36', '2024-01-05', '00000000-0000-0000-0000-000000000001'),
-(2, 'in', 2000, 'Pembelian bata merah untuk pembangunan', '2024-01-06', '00000000-0000-0000-0000-000000000001'),
-(3, 'in', 10, 'Pembelian pasir untuk proyek', '2024-01-07', '00000000-0000-0000-0000-000000000002'),
-(4, 'in', 200, 'Pembelian besi beton untuk struktur', '2024-01-08', '00000000-0000-0000-0000-000000000001'),
+INSERT INTO inventory_transactions (inventory_id, type, quantity, description, transaction_date, created_by) VALUES
+(1, 'in', 50, 'Pembelian semen untuk proyek rumah Type 36', '2024-01-05', NULL),
+(2, 'in', 2000, 'Pembelian bata merah untuk pembangunan', '2024-01-06', NULL),
+(3, 'in', 10, 'Pembelian pasir untuk proyek', '2024-01-07', NULL),
+(4, 'in', 200, 'Pembelian besi beton untuk struktur', '2024-01-08', NULL),
 
 -- Stock out (penggunaan)
-(1, 'out', 30, 'Penggunaan semen untuk pembangunan rumah Type 36', '2024-01-10', '00000000-0000-0000-0000-000000000003'),
-(2, 'out', 1000, 'Penggunaan bata untuk dinding rumah', '2024-01-11', '00000000-0000-0000-0000-000000000003'),
-(3, 'out', 5, 'Penggunaan pasir untuk plesteran', '2024-01-12', '00000000-0000-0000-0000-000000000003'),
-(4, 'out', 100, 'Penggunaan besi untuk struktur rumah', '2024-01-13', '00000000-0000-0000-0000-000000000003'),
-(5, 'out', 10, 'Penggunaan cat untuk finishing rumah', '2024-01-14', '00000000-0000-0000-0000-000000000003'),
-(6, 'out', 50, 'Pemasangan keramik lantai', '2024-01-15', '00000000-0000-0000-0000-000000000003')
+(1, 'out', 30, 'Penggunaan semen untuk pembangunan rumah Type 36', '2024-01-10', NULL),
+(2, 'out', 1000, 'Penggunaan bata untuk dinding rumah', '2024-01-11', NULL),
+(3, 'out', 5, 'Penggunaan pasir untuk plesteran', '2024-01-12', NULL),
+(4, 'out', 100, 'Penggunaan besi untuk struktur rumah', '2024-01-13', NULL),
+(5, 'out', 10, 'Penggunaan cat untuk finishing rumah', '2024-01-14', NULL),
+(6, 'out', 50, 'Pemasangan keramik lantai', '2024-01-15', NULL)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
 -- PROPERTY SALES (Sample Sales)
 -- ============================================
+-- CATATAN: created_by bisa NULL untuk testing, atau ganti dengan UUID user yang valid
+
 INSERT INTO property_sales (property_id, buyer_name, buyer_email, buyer_phone, sale_price, sale_date, status, notes, created_by) VALUES
-(3, 'Budi Santoso', 'budi.santoso@email.com', '081234567890', 650000000, '2024-01-15', 'completed', 'Pembayaran lunas, proses serah terima selesai', '00000000-0000-0000-0000-000000000001'),
-(6, 'Siti Nurhaliza', 'siti.nurhaliza@email.com', '081234567891', 350000000, '2024-01-20', 'pending', 'DP sudah dibayar 50%, sisa pembayaran bulan depan', '00000000-0000-0000-0000-000000000002'),
-(1, 'Ahmad Fauzi', 'ahmad.fauzi@email.com', '081234567892', 350000000, '2024-01-25', 'pending', 'Sedang proses survey dan negosiasi', '00000000-0000-0000-0000-000000000002'),
-(2, 'Dewi Sartika', 'dewi.sartika@email.com', '081234567893', 450000000, '2024-01-28', 'pending', 'Minat tinggi, menunggu persetujuan kredit', '00000000-0000-0000-0000-000000000001')
+(3, 'Budi Santoso', 'budi.santoso@email.com', '081234567890', 650000000, '2024-01-15', 'completed', 'Pembayaran lunas, proses serah terima selesai', NULL),
+(6, 'Siti Nurhaliza', 'siti.nurhaliza@email.com', '081234567891', 350000000, '2024-01-20', 'pending', 'DP sudah dibayar 50%, sisa pembayaran bulan depan', NULL),
+(1, 'Ahmad Fauzi', 'ahmad.fauzi@email.com', '081234567892', 350000000, '2024-01-25', 'pending', 'Sedang proses survey dan negosiasi', NULL),
+(2, 'Dewi Sartika', 'dewi.sartika@email.com', '081234567893', 450000000, '2024-01-28', 'pending', 'Minat tinggi, menunggu persetujuan kredit', NULL)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
