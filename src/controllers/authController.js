@@ -9,10 +9,15 @@ exports.getOAuthUrl = async (req, res) => {
   try {
     const { provider = 'google', redirectTo = process.env.FRONTEND_URL } = req.query;
 
+    // Frontend already includes /auth/callback in redirectTo, just add provider query param
+    const finalRedirectUrl = redirectTo.includes('/auth/callback') 
+      ? `${redirectTo}?provider=${provider}` 
+      : `${redirectTo}/auth/callback?provider=${provider}`;
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
-        redirectTo: `${redirectTo}/auth/callback?provider=${provider}`
+        redirectTo: finalRedirectUrl
       }
     });
 
