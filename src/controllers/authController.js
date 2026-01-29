@@ -28,6 +28,14 @@ exports.getOAuthUrl = async (req, res) => {
       });
     }
 
+    // Prevent caching - OAuth URLs should always be fresh
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    });
+
     res.json({
       success: true,
       data: {

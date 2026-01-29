@@ -1,0 +1,353 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Sistem Pengelolaan Perumahan",
+    "version": "1.0.0",
+    "description": "Complete API documentation for frontend consumption"
+  },
+  "servers": [
+    { "url": "https://web-production-bd9e5.up.railway.app", "description": "Development" },
+    { "url": "https://web-production-bd9e5.up.railway.app", "description": "Production" }
+  ],
+
+  "auth": {
+    "basePath": "/api/auth",
+    "description": "Authentication endpoints",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/oauth",
+        "description": "Get OAuth URL for Google/GitHub login",
+        "access": "public",
+        "query": {
+          "provider": "google | github",
+          "redirectTo": "string (URL to redirect after login)"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/callback",
+        "description": "Handle OAuth callback",
+        "access": "public",
+        "body": {
+          "access_token": "string (required)",
+          "refresh_token": "string (required)"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/signup",
+        "description": "Register new user",
+        "access": "public",
+        "body": {
+          "email": "string (required)",
+          "password": "string (required)",
+          "name": "string",
+          "role": "user | admin | superadmin"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/signin",
+        "description": "Login with email/password",
+        "access": "public",
+        "body": {
+          "email": "string (required)",
+          "password": "string (required)"
+        },
+        "response": {
+          "user": { "id": "uuid", "email": "string", "name": "string", "role": "string" },
+          "session": { "access_token": "string", "refresh_token": "string", "expires_at": "integer" }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/reset-password",
+        "description": "Send password reset email",
+        "access": "public",
+        "body": { "email": "string (required)" }
+      },
+      {
+        "method": "POST",
+        "path": "/resend-verification",
+        "description": "Resend verification email",
+        "access": "public",
+        "body": { "email": "string (required)" }
+      },
+      {
+        "method": "POST",
+        "path": "/refresh-token",
+        "description": "Refresh access token",
+        "access": "public",
+        "body": { "refresh_token": "string (required)" }
+      },
+      {
+        "method": "POST",
+        "path": "/signout",
+        "description": "Logout",
+        "access": "authenticated"
+      },
+      {
+        "method": "GET",
+        "path": "/profile",
+        "description": "Get current user profile",
+        "access": "authenticated"
+      },
+      {
+        "method": "PUT",
+        "path": "/profile",
+        "description": "Update user profile",
+        "access": "authenticated",
+        "body": { "name": "string", "role": "string" }
+      }
+    ]
+  },
+
+  "users": {
+    "basePath": "/api/users",
+    "description": "User management (Superadmin only)",
+    "routes": [
+      { "method": "GET", "path": "/", "description": "Get all users", "access": "superadmin" },
+      { "method": "GET", "path": "/:id", "description": "Get user by ID", "access": "superadmin" },
+      { "method": "PATCH", "path": "/:id/role", "description": "Update user role", "access": "superadmin", "body": { "role": "user | admin | superadmin" } },
+      { "method": "DELETE", "path": "/:id", "description": "Delete user", "access": "superadmin" }
+    ]
+  },
+
+  "roles": {
+    "basePath": "/api/roles",
+    "description": "Role management (Superadmin only)",
+    "routes": [
+      { "method": "GET", "path": "/hierarchy", "description": "Get role hierarchy info", "access": "superadmin" },
+      { "method": "GET", "path": "/:role/permissions", "description": "Get permissions for a role", "access": "superadmin" },
+      { "method": "GET", "path": "/permissions/matrix", "description": "Get permissions matrix for all roles", "access": "superadmin" },
+      { "method": "GET", "path": "/users", "description": "Get all users with roles", "access": "superadmin" },
+      { "method": "GET", "path": "/users/:role", "description": "Get users by role", "access": "superadmin" },
+      { "method": "PATCH", "path": "/users/:id/role", "description": "Update user role", "access": "superadmin", "body": { "role": "user | admin | superadmin" } },
+      { "method": "GET", "path": "/statistics", "description": "Get role statistics", "access": "superadmin" },
+      { "method": "GET", "path": "/:role/features", "description": "Get feature access for a role", "access": "superadmin" }
+    ]
+  },
+
+  "divisions": {
+    "basePath": "/api/divisions",
+    "description": "Division management",
+    "routes": [
+      { "method": "GET", "path": "/", "description": "Get all divisions", "access": "authenticated" },
+      { "method": "GET", "path": "/:id", "description": "Get division by ID", "access": "authenticated" },
+      { "method": "POST", "path": "/", "description": "Create division", "access": "superadmin", "body": { "name": "string (required)", "code": "string (required)", "description": "string" } },
+      { "method": "PUT", "path": "/:id", "description": "Update division", "access": "superadmin", "body": { "name": "string", "code": "string", "description": "string", "is_active": "boolean" } },
+      { "method": "DELETE", "path": "/:id", "description": "Delete division", "access": "superadmin" },
+      { "method": "GET", "path": "/:id/users", "description": "Get users in division", "access": "admin" },
+      { "method": "POST", "path": "/:id/users", "description": "Assign user to division", "access": "admin", "body": { "user_id": "uuid (required)" } },
+      { "method": "DELETE", "path": "/:id/users/:userId", "description": "Remove user from division", "access": "admin" }
+    ]
+  },
+
+  "modules": {
+    "basePath": "/api/modules",
+    "description": "Module/Menu management",
+    "routes": [
+      { "method": "GET", "path": "/", "description": "Get all modules", "access": "authenticated" },
+      { "method": "GET", "path": "/:id", "description": "Get module by ID", "access": "authenticated" },
+      { "method": "POST", "path": "/", "description": "Create module", "access": "superadmin", "body": { "name": "string (required)", "code": "string (required)", "description": "string", "icon": "string", "route": "string", "sort_order": "integer" } },
+      { "method": "PUT", "path": "/:id", "description": "Update module", "access": "superadmin" },
+      { "method": "DELETE", "path": "/:id", "description": "Delete module", "access": "superadmin" }
+    ]
+  },
+
+  "permissions": {
+    "basePath": "/api/permissions",
+    "description": "User permission management",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/me",
+        "description": "Get current user permissions (FOR FRONTEND)",
+        "access": "authenticated",
+        "response": {
+          "user": { "id": "uuid", "email": "string", "role": "string", "name": "string" },
+          "divisions": [{ "id": "uuid", "name": "string", "code": "string" }],
+          "permissions": {
+            "keuangan": { "name": "string", "icon": "string", "route": "string", "view": "boolean", "create": "boolean", "update": "boolean", "delete": "boolean" }
+          },
+          "modules": [{ "id": "uuid", "code": "string", "name": "string", "icon": "string", "route": "string", "sort_order": "integer" }]
+        }
+      },
+      { "method": "GET", "path": "/user/:userId", "description": "Get user permissions", "access": "admin" },
+      { "method": "PUT", "path": "/user/:userId", "description": "Set user permissions", "access": "admin", "body": { "permissions": { "keuangan": { "view": "boolean", "create": "boolean", "update": "boolean", "delete": "boolean" } } } },
+      { "method": "POST", "path": "/bulk", "description": "Bulk set permissions", "access": "admin", "body": { "user_ids": ["uuid"], "permissions": {} } }
+    ]
+  },
+
+  "keuangan": {
+    "basePath": "/api/keuangan",
+    "description": "Financial transactions",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "description": "Get all transactions",
+        "access": "permission: keuangan.view",
+        "query": { "type": "income | expense", "category": "string", "start_date": "date", "end_date": "date", "limit": "integer" }
+      },
+      { "method": "GET", "path": "/summary", "description": "Get financial summary", "access": "permission: keuangan.view", "query": { "start_date": "date", "end_date": "date" } },
+      { "method": "GET", "path": "/:id", "description": "Get transaction by ID", "access": "permission: keuangan.view" },
+      {
+        "method": "POST",
+        "path": "/",
+        "description": "Create transaction",
+        "access": "permission: keuangan.create",
+        "body": {
+          "type": "income | expense (required)",
+          "category": "string (required)",
+          "amount": "number (required)",
+          "description": "string",
+          "transaction_date": "date (required)",
+          "property_id": "integer"
+        }
+      },
+      { "method": "PUT", "path": "/:id", "description": "Update transaction", "access": "permission: keuangan.update" },
+      { "method": "DELETE", "path": "/:id", "description": "Delete transaction", "access": "permission: keuangan.delete" }
+    ]
+  },
+
+  "properti": {
+    "basePath": "/api/properti",
+    "description": "Property management",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "description": "Get all properties",
+        "access": "permission: properti.view",
+        "query": { "type": "string", "status": "available | sold | reserved", "min_price": "number", "max_price": "number" }
+      },
+      { "method": "GET", "path": "/available", "description": "Get available properties", "access": "permission: properti.view" },
+      { "method": "GET", "path": "/stats", "description": "Get property statistics", "access": "permission: properti.view" },
+      { "method": "GET", "path": "/:id", "description": "Get property by ID", "access": "permission: properti.view" },
+      { "method": "GET", "path": "/:id/sales", "description": "Get property sales history", "access": "permission: properti.view" },
+      {
+        "method": "POST",
+        "path": "/",
+        "description": "Create property",
+        "access": "permission: properti.create",
+        "body": {
+          "name": "string (required)",
+          "type": "string (required)",
+          "address": "string (required)",
+          "price": "number (required)",
+          "status": "available | sold | reserved",
+          "description": "string",
+          "luas_tanah": "number",
+          "luas_bangunan": "number",
+          "jumlah_kamar": "integer",
+          "jumlah_kamar_mandi": "integer"
+        }
+      },
+      { "method": "PUT", "path": "/:id", "description": "Update property", "access": "permission: properti.update" },
+      { "method": "DELETE", "path": "/:id", "description": "Delete property", "access": "permission: properti.delete" },
+      { "method": "PATCH", "path": "/:id/status", "description": "Update property status", "access": "permission: properti.update", "body": { "status": "available | sold | reserved" } }
+    ]
+  },
+
+  "persediaan": {
+    "basePath": "/api/persediaan",
+    "description": "Inventory management",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "description": "Get all inventory items",
+        "access": "permission: persediaan.view",
+        "query": { "category": "string", "supplier": "string", "low_stock": "boolean" }
+      },
+      { "method": "GET", "path": "/low-stock", "description": "Get low stock items", "access": "permission: persediaan.view" },
+      { "method": "GET", "path": "/stats", "description": "Get inventory statistics", "access": "permission: persediaan.view" },
+      { "method": "GET", "path": "/:id", "description": "Get inventory item by ID", "access": "permission: persediaan.view" },
+      { "method": "GET", "path": "/:id/history", "description": "Get inventory transaction history", "access": "permission: persediaan.view" },
+      {
+        "method": "POST",
+        "path": "/",
+        "description": "Create inventory item",
+        "access": "permission: persediaan.create",
+        "body": {
+          "name": "string (required)",
+          "category": "string (required)",
+          "quantity": "integer (required)",
+          "unit": "string (required)",
+          "unit_price": "number",
+          "supplier": "string",
+          "min_stock": "integer",
+          "description": "string"
+        }
+      },
+      { "method": "PUT", "path": "/:id", "description": "Update inventory item", "access": "permission: persediaan.update" },
+      { "method": "DELETE", "path": "/:id", "description": "Delete inventory item", "access": "permission: persediaan.delete" },
+      { "method": "PATCH", "path": "/:id/quantity", "description": "Update inventory quantity", "access": "permission: persediaan.update", "body": { "quantity": "integer (required)" } },
+      {
+        "method": "POST",
+        "path": "/:id/transaction",
+        "description": "Add inventory transaction (in/out)",
+        "access": "permission: persediaan.create",
+        "body": { "type": "in | out (required)", "quantity": "integer (required)", "description": "string", "transaction_date": "date" }
+      }
+    ]
+  },
+
+  "penjualan": {
+    "basePath": "/api/penjualan",
+    "description": "Property sales",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "description": "Get all sales",
+        "access": "permission: penjualan.view",
+        "query": { "status": "pending | completed | cancelled", "buyer_name": "string", "start_date": "date", "end_date": "date" }
+      },
+      { "method": "GET", "path": "/stats", "description": "Get sales statistics", "access": "permission: penjualan.view", "query": { "start_date": "date", "end_date": "date" } },
+      { "method": "GET", "path": "/revenue/:year", "description": "Get monthly revenue for a year", "access": "permission: penjualan.view" },
+      { "method": "GET", "path": "/:id", "description": "Get sale by ID", "access": "permission: penjualan.view" },
+      {
+        "method": "POST",
+        "path": "/",
+        "description": "Create property sale",
+        "access": "permission: penjualan.create",
+        "body": {
+          "property_id": "integer (required)",
+          "buyer_name": "string (required)",
+          "buyer_email": "string",
+          "buyer_phone": "string",
+          "sale_price": "number (required)",
+          "sale_date": "date (required)",
+          "status": "pending | completed | cancelled",
+          "notes": "string"
+        }
+      },
+      { "method": "PUT", "path": "/:id", "description": "Update sale", "access": "permission: penjualan.update" },
+      { "method": "DELETE", "path": "/:id", "description": "Delete sale", "access": "permission: penjualan.delete" },
+      { "method": "PATCH", "path": "/:id/status", "description": "Update sale status", "access": "permission: penjualan.update", "body": { "status": "pending | completed | cancelled" } },
+      { "method": "POST", "path": "/:id/complete", "description": "Complete sale (creates transaction + updates property)", "access": "permission: penjualan.update" }
+    ]
+  },
+
+  "frontendUsage": {
+    "authFlow": [
+      "1. POST /api/auth/signin → Get access_token",
+      "2. Store token in localStorage/cookie",
+      "3. GET /api/permissions/me → Get user permissions",
+      "4. Render menu based on permissions"
+    ],
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "permissionCheck": {
+      "showMenu": "permissions.keuangan?.view === true",
+      "showAddButton": "permissions.keuangan?.create === true",
+      "showEditButton": "permissions.keuangan?.update === true",
+      "showDeleteButton": "permissions.keuangan?.delete === true"
+    }
+  }
+}
