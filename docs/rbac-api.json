@@ -1,0 +1,287 @@
+{
+  "version": "1.0.0",
+  "title": "API RBAC System Documentation",
+  "description": "Documentation for Division-based Role and Permission System",
+  "baseUrl": "/api",
+  
+  "endpoints": {
+    "divisions": {
+      "basePath": "/divisions",
+      "description": "Division/Department management",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/",
+          "description": "Get all divisions",
+          "access": "authenticated",
+          "response": {
+            "success": true,
+            "data": [
+              {
+                "id": "uuid",
+                "name": "Keuangan",
+                "code": "KEU",
+                "description": "Divisi Keuangan",
+                "is_active": true,
+                "user_count": 5,
+                "created_at": "2026-01-29T00:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "description": "Get division by ID",
+          "access": "authenticated",
+          "params": { "id": "uuid" }
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "description": "Create new division",
+          "access": "superadmin",
+          "body": {
+            "name": "string (required)",
+            "code": "string (required, unique)",
+            "description": "string (optional)"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "description": "Update division",
+          "access": "superadmin",
+          "body": {
+            "name": "string",
+            "code": "string",
+            "description": "string",
+            "is_active": "boolean"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "description": "Delete division",
+          "access": "superadmin"
+        },
+        {
+          "method": "GET",
+          "path": "/:id/users",
+          "description": "Get users in a division",
+          "access": "admin"
+        },
+        {
+          "method": "POST",
+          "path": "/:id/users",
+          "description": "Assign user to division",
+          "access": "admin",
+          "body": {
+            "user_id": "uuid (required)"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id/users/:userId",
+          "description": "Remove user from division",
+          "access": "admin"
+        }
+      ]
+    },
+
+    "modules": {
+      "basePath": "/modules",
+      "description": "Module/Menu management",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/",
+          "description": "Get all modules",
+          "access": "authenticated",
+          "response": {
+            "success": true,
+            "data": [
+              {
+                "id": "uuid",
+                "name": "Keuangan",
+                "code": "keuangan",
+                "description": "Manajemen keuangan",
+                "icon": "wallet",
+                "route": "/keuangan",
+                "is_active": true,
+                "sort_order": 1
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "description": "Get module by ID",
+          "access": "authenticated"
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "description": "Create new module",
+          "access": "superadmin",
+          "body": {
+            "name": "string (required)",
+            "code": "string (required, unique)",
+            "description": "string",
+            "icon": "string",
+            "route": "string",
+            "sort_order": "integer"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "description": "Update module",
+          "access": "superadmin"
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "description": "Delete module",
+          "access": "superadmin"
+        }
+      ]
+    },
+
+    "permissions": {
+      "basePath": "/permissions",
+      "description": "User permission management",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/me",
+          "description": "Get current user's permissions (USE THIS FOR FRONTEND)",
+          "access": "authenticated",
+          "response": {
+            "success": true,
+            "data": {
+              "user": {
+                "id": "uuid",
+                "email": "user@example.com",
+                "role": "admin",
+                "name": "John Doe"
+              },
+              "divisions": [
+                { "id": "uuid", "name": "Keuangan", "code": "KEU" }
+              ],
+              "permissions": {
+                "keuangan": {
+                  "name": "Keuangan",
+                  "icon": "wallet",
+                  "route": "/keuangan",
+                  "view": true,
+                  "create": true,
+                  "update": false,
+                  "delete": false
+                },
+                "properti": {
+                  "name": "Properti",
+                  "icon": "home",
+                  "route": "/properti",
+                  "view": true,
+                  "create": false,
+                  "update": false,
+                  "delete": false
+                }
+              },
+              "modules": [
+                {
+                  "id": "uuid",
+                  "code": "keuangan",
+                  "name": "Keuangan",
+                  "icon": "wallet",
+                  "route": "/keuangan",
+                  "sort_order": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/user/:userId",
+          "description": "Get permissions for a specific user",
+          "access": "admin"
+        },
+        {
+          "method": "PUT",
+          "path": "/user/:userId",
+          "description": "Set permissions for a user",
+          "access": "admin",
+          "body": {
+            "permissions": {
+              "keuangan": { "view": true, "create": true, "update": false, "delete": false },
+              "properti": { "view": true, "create": false, "update": false, "delete": false }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/bulk",
+          "description": "Bulk set permissions for multiple users",
+          "access": "admin",
+          "body": {
+            "user_ids": ["uuid1", "uuid2"],
+            "permissions": {
+              "keuangan": { "view": true, "create": true, "update": true, "delete": false }
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  "roles": {
+    "superadmin": {
+      "description": "Owner - Full access to everything",
+      "permissions": "All modules, all actions, bypasses permission check"
+    },
+    "admin": {
+      "description": "Division admin - Manages users and permissions in assigned divisions",
+      "permissions": "Access to assigned divisions, can manage user permissions"
+    },
+    "user": {
+      "description": "Regular user - Access based on granted permissions",
+      "permissions": "Only modules/actions explicitly granted by admin"
+    }
+  },
+
+  "defaultModules": [
+    { "code": "keuangan", "name": "Keuangan", "icon": "wallet" },
+    { "code": "properti", "name": "Properti", "icon": "home" },
+    { "code": "persediaan", "name": "Persediaan", "icon": "package" },
+    { "code": "penjualan", "name": "Penjualan", "icon": "shopping-cart" },
+    { "code": "users", "name": "User Management", "icon": "users" },
+    { "code": "roles", "name": "Role Management", "icon": "shield" },
+    { "code": "divisions", "name": "Divisi", "icon": "building" }
+  ],
+
+  "defaultDivisions": [
+    { "code": "KEU", "name": "Keuangan" },
+    { "code": "PROP", "name": "Properti" },
+    { "code": "SALES", "name": "Penjualan" },
+    { "code": "WH", "name": "Gudang" }
+  ],
+
+  "frontendUsage": {
+    "description": "How to use in frontend",
+    "steps": [
+      "1. Call GET /api/permissions/me after login",
+      "2. Store response in auth context/store",
+      "3. Use permissions object to render sidebar menu",
+      "4. Use view/create/update/delete booleans to show/hide buttons",
+      "5. Use divisions array to show user's assigned divisions"
+    ],
+    "example": {
+      "checkPermission": "if (permissions.keuangan?.view) { showKeuanganMenu(); }",
+      "checkAction": "if (permissions.keuangan?.create) { showAddButton(); }",
+      "renderMenu": "modules.filter(m => permissions[m.code]?.view).map(m => <MenuItem {...m} />)"
+    }
+  }
+}

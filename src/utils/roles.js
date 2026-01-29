@@ -33,9 +33,20 @@ const isSuperAdminRole = (role) => {
   return role === ROLES.SUPERADMIN;
 };
 
+/**
+ * Actions untuk permission check
+ */
+const ACTIONS = {
+  VIEW: 'view',
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete'
+};
+
 module.exports = {
   ROLES,
   VALID_ROLES,
+  ACTIONS,
   isValidRole,
   isAdminRole,
   isSuperAdminRole

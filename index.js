@@ -55,7 +55,10 @@ app.get('/', (req, res) => {
         keuangan: '/api/keuangan',
         properti: '/api/properti',
         persediaan: '/api/persediaan',
-        penjualan: '/api/penjualan'
+        penjualan: '/api/penjualan',
+        divisions: '/api/divisions',
+        modules: '/api/modules',
+        permissions: '/api/permissions'
       }
   });
 });
@@ -68,6 +71,9 @@ const keuanganRoutes = require('./src/routes/keuangan');
 const propertiRoutes = require('./src/routes/properti');
 const persediaanRoutes = require('./src/routes/persediaan');
 const penjualanRoutes = require('./src/routes/penjualan');
+const divisionRoutes = require('./src/routes/divisions');
+const moduleRoutes = require('./src/routes/modules');
+const permissionRoutes = require('./src/routes/permissions');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -77,6 +83,9 @@ app.use('/api/keuangan', keuanganRoutes);
 app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);
 app.use('/api/penjualan', penjualanRoutes);
+app.use('/api/divisions', divisionRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/permissions', permissionRoutes);
 
 // Swagger documentation
 const swaggerUiOptions = {
