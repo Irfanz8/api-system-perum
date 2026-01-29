@@ -57,25 +57,44 @@ exports.getOAuthUrl = async (req, res) => {
  */
 exports.handleOAuthCallback = async (req, res) => {
   try {
-    const { access_token, refresh_token } = req.query;
+    // Support both POST body and GET query params
+    const access_token = req.body?.access_token || req.query?.access_token;
+    const refresh_token = req.body?.refresh_token || req.query?.refresh_token;
+
+    console.log('OAuth callback received:', {
+      hasAccessToken: !!access_token,
+      hasRefreshToken: !!refresh_token,
+      method: req.method,
+      body: req.body ? Object.keys(req.body) : 'none',
+      query: req.query ? Object.keys(req.query) : 'none'
+    });
 
     if (!access_token) {
       return res.status(400).json({
         success: false,
-        error: 'Access token not provided'
+        error: 'Access token not provided. Please include access_token in request body or query params.'
       });
     }
 
     // Set session dengan Supabase
-    const { data: { user }, error } = await supabase.auth.setSession({
+    const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token
     });
 
     if (error) {
+      console.error('Supabase setSession error:', error);
       return res.status(400).json({
         success: false,
         error: error.message
+      });
+    }
+
+    const user = data?.user;
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to get user from session'
       });
     }
 
@@ -88,9 +107,9 @@ exports.handleOAuthCallback = async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          name: user.user_metadata.name || user.email,
-          role: user.user_metadata.role || ROLES.USER,
-          avatar: user.user_metadata.avatar_url
+          name: user.user_metadata?.name || user.email,
+          role: user.user_metadata?.role || ROLES.USER,
+          avatar: user.user_metadata?.avatar_url
         },
         session: {
           access_token,
@@ -102,7 +121,7 @@ exports.handleOAuthCallback = async (req, res) => {
     console.error('OAuth callback error:', error);
     res.status(500).json({
       success: false,
-      error: 'OAuth callback failed'
+      error: 'OAuth callback failed: ' + (error.message || 'Unknown error')
     });
   }
 };
