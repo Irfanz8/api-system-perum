@@ -16,6 +16,7 @@ import propertiRoutes from './src/routes/properti.js';
 import persediaanRoutes from './src/routes/persediaan.js';
 import penjualanRoutes from './src/routes/penjualan.js';
 import divisionRoutes from './src/routes/divisions.js';
+import divisionAdminRoutes from './src/routes/divisionAdmin.js';
 import moduleRoutes from './src/routes/modules.js';
 import permissionRoutes from './src/routes/permissions.js';
 
@@ -69,6 +70,7 @@ app.get('/', (req, res) => {
         persediaan: '/api/persediaan',
         penjualan: '/api/penjualan',
         divisions: '/api/divisions',
+        divisionAdmin: '/api/division-admin',
         modules: '/api/modules',
         permissions: '/api/permissions'
       }
@@ -84,6 +86,7 @@ app.use('/api/properti', propertiRoutes);
 app.use('/api/persediaan', persediaanRoutes);
 app.use('/api/penjualan', penjualanRoutes);
 app.use('/api/divisions', divisionRoutes);
+app.use('/api/division-admin', divisionAdminRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/permissions', permissionRoutes);
 

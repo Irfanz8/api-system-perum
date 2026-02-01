@@ -1,0 +1,434 @@
+{
+  "endpoints": {
+    "get_my_division": {
+      "method": "GET",
+      "path": "/division-admin/my-division",
+      "auth": "required",
+      "role": "division admin",
+      "description": "Get division information where current user is admin",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer {division_admin_token}"
+        }
+      },
+      "response_success": {
+        "success": true,
+        "data": {
+          "id": "uuid",
+          "name": "Keuangan",
+          "code": "KEU",
+          "description": "Divisi Keuangan - mengelola transaksi dan laporan keuangan",
+          "is_active": true,
+          "member_count": 4,
+          "admin_since": "2026-01-01T00:00:00Z"
+        }
+      },
+      "response_error": {
+        "404": {
+          "success": false,
+          "error": "Anda belum ditugaskan sebagai admin divisi manapun"
+        },
+        "403": {
+          "success": false,
+          "error": "You must be a division admin to perform this action"
+        }
+      }
+    },
+    "get_team_members": {
+      "method": "GET",
+      "path": "/division-admin/team",
+      "auth": "required",
+      "role": "division admin",
+      "description": "Get all team members in division admin's division with their permissions",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer {division_admin_token}"
+        }
+      },
+      "response_success": {
+        "success": true,
+        "division": {
+          "id": "uuid",
+          "name": "Keuangan",
+          "code": "KEU",
+          "description": "Divisi Keuangan"
+        },
+        "count": 4,
+        "data": [
+          {
+            "id": "user-uuid-1",
+            "username": "Admin Keuangan",
+            "email": "admin.keuangan@perum.com",
+            "role": "user",
+            "is_division_admin": true,
+            "joined_at": "2026-01-01T00:00:00Z",
+            "permissions": [
+              {
+                "module_id": "module-uuid",
+                "module_code": "keuangan",
+                "module_name": "Keuangan",
+                "can_view": true,
+                "can_create": true,
+                "can_update": true,
+                "can_delete": true
+              },
+              {
+                "module_id": "module-uuid-2",
+                "module_code": "dashboard",
+                "module_name": "Dashboard",
+                "can_view": true,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              }
+            ]
+          },
+          {
+            "id": "user-uuid-2",
+            "username": "Budi Santoso",
+            "email": "budi.santoso@perum.com",
+            "role": "user",
+            "is_division_admin": false,
+            "joined_at": "2026-01-02T00:00:00Z",
+            "permissions": [
+              {
+                "module_id": "module-uuid",
+                "module_code": "keuangan",
+                "module_name": "Keuangan",
+                "can_view": true,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              }
+            ]
+          }
+        ]
+      },
+      "response_error": {
+        "403": {
+          "success": false,
+          "error": "Anda bukan admin divisi"
+        }
+      }
+    },
+    "update_member_permissions": {
+      "method": "PATCH",
+      "path": "/division-admin/team/:userId/permissions",
+      "auth": "required",
+      "role": "division admin",
+      "description": "Update permissions for a team member in your division",
+      "restrictions": [
+        "Can only update permissions for users in same division",
+        "Cannot modify superadmin permissions",
+        "Cannot modify other division admin permissions"
+      ],
+      "request": {
+        "headers": {
+          "Authorization": "Bearer {division_admin_token}",
+          "Content-Type": "application/json"
+        },
+        "params": {
+          "userId": "UUID of team member"
+        },
+        "body": {
+          "moduleCode": "keuangan",
+          "permissions": {
+            "can_view": true,
+            "can_create": true,
+            "can_update": true,
+            "can_delete": false
+          }
+        }
+      },
+      "request_example": {
+        "moduleCode": "keuangan",
+        "permissions": {
+          "can_view": true,
+          "can_create": true,
+          "can_update": false,
+          "can_delete": false
+        }
+      },
+      "response_success": {
+        "success": true,
+        "message": "Permissions berhasil diupdate",
+        "data": {
+          "id": "permission-uuid",
+          "user_id": "user-uuid",
+          "module_id": "module-uuid",
+          "can_view": true,
+          "can_create": true,
+          "can_update": false,
+          "can_delete": false,
+          "granted_by": "division-admin-uuid",
+          "created_at": "2026-01-01T00:00:00Z",
+          "updated_at": "2026-01-05T10:30:00Z"
+        }
+      },
+      "response_error": {
+        "400": {
+          "success": false,
+          "error": "Module code dan permissions wajib diisi"
+        },
+        "403_not_admin": {
+          "success": false,
+          "error": "Anda bukan admin divisi"
+        },
+        "403_wrong_division": {
+          "success": false,
+          "error": "User tidak ada dalam divisi Anda"
+        },
+        "403_superadmin": {
+          "success": false,
+          "error": "Tidak bisa mengubah permissions superadmin"
+        },
+        "403_other_admin": {
+          "success": false,
+          "error": "Tidak bisa mengubah permissions division admin lain"
+        },
+        "404": {
+          "success": false,
+          "error": "Module tidak ditemukan"
+        }
+      }
+    },
+    "get_permissions_matrix": {
+      "method": "GET",
+      "path": "/division-admin/permissions-matrix",
+      "auth": "required",
+      "role": "division admin",
+      "description": "Get complete permissions matrix showing all team members and their access to each module",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer {division_admin_token}"
+        }
+      },
+      "response_success": {
+        "success": true,
+        "modules": [
+          {
+            "code": "dashboard",
+            "name": "Dashboard",
+            "icon": "home"
+          },
+          {
+            "code": "keuangan",
+            "name": "Keuangan",
+            "icon": "wallet"
+          },
+          {
+            "code": "reports",
+            "name": "Laporan",
+            "icon": "chart"
+          }
+        ],
+        "matrix": [
+          {
+            "user": {
+              "id": "user-uuid-1",
+              "username": "Budi Santoso",
+              "email": "budi.santoso@perum.com",
+              "role": "user"
+            },
+            "permissions": {
+              "dashboard": {
+                "can_view": true,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              },
+              "keuangan": {
+                "can_view": true,
+                "can_create": true,
+                "can_update": false,
+                "can_delete": false
+              },
+              "reports": {
+                "can_view": false,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              }
+            }
+          },
+          {
+            "user": {
+              "id": "user-uuid-2",
+              "username": "Siti Aminah",
+              "email": "siti.aminah@perum.com",
+              "role": "user"
+            },
+            "permissions": {
+              "dashboard": {
+                "can_view": true,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              },
+              "keuangan": {
+                "can_view": true,
+                "can_create": true,
+                "can_update": true,
+                "can_delete": false
+              },
+              "reports": {
+                "can_view": true,
+                "can_create": false,
+                "can_update": false,
+                "can_delete": false
+              }
+            }
+          }
+        ]
+      },
+      "response_error": {
+        "403": {
+          "success": false,
+          "error": "Anda bukan admin divisi"
+        }
+      }
+    }
+  },
+  "authorization_flow": {
+    "middleware_chain": [
+      "authenticateUser - Verify JWT token and get user info",
+      "isDivisionAdmin - Check if user has is_division_admin=true in any division",
+      "canManageUser - (for update permissions) Verify target user is in same division"
+    ],
+    "checks": {
+      "isDivisionAdmin": "SELECT 1 FROM user_divisions WHERE user_id = ? AND is_division_admin = true",
+      "canManageUser": "Verify both users in same division AND requester is division admin"
+    }
+  },
+  "frontend_implementation_guide": {
+    "check_if_division_admin": {
+      "description": "Call this on app load to determine if user is division admin",
+      "endpoint": "GET /division-admin/my-division",
+      "on_success": "User is division admin - show division admin menu",
+      "on_404": "User is not division admin - hide division admin features",
+      "store_in_state": {
+        "isDivisionAdmin": true,
+        "division": {
+          "id": "uuid",
+          "name": "Keuangan",
+          "code": "KEU"
+        }
+      }
+    },
+    "display_team_list": {
+      "description": "Show team members with their current permissions",
+      "endpoint": "GET /division-admin/team",
+      "ui_suggestions": {
+        "table_columns": ["Name", "Email", "Role", "Division Admin", "Permissions", "Actions"],
+        "highlight_admins": "Use badge or different background color for is_division_admin=true",
+        "permissions_display": "Show module icons with checkmarks for granted permissions"
+      }
+    },
+    "edit_permissions_modal": {
+      "description": "Modal/form to update member permissions",
+      "workflow": [
+        "1. Click 'Edit Permissions' on team member row",
+        "2. Show modal with list of modules",
+        "3. For each module, show checkboxes: View, Create, Update, Delete",
+        "4. On save, call PATCH /division-admin/team/:userId/permissions for each changed module",
+        "5. Refresh team list"
+      ],
+      "ui_elements": {
+        "module_selector": "Dropdown or tabs to select which module to edit",
+        "permission_checkboxes": "4 checkboxes with clear labels",
+        "save_button": "Submit changes",
+        "cancel_button": "Close modal without saving"
+      }
+    },
+    "permissions_matrix_view": {
+      "description": "Advanced view showing all permissions in grid format",
+      "endpoint": "GET /division-admin/permissions-matrix",
+      "ui_implementation": {
+        "layout": "Table with users as rows, modules×permissions as columns",
+        "example": "User | Dashboard View | Dashboard Create | Keuangan View | Keuangan Create | ...",
+        "interactive": "Click cell to toggle permission",
+        "color_coding": "Green for granted, gray for denied"
+      }
+    }
+  },
+  "common_workflows": {
+    "onboarding_new_team_member": {
+      "steps": [
+        "1. Superadmin creates user in Supabase Auth",
+        "2. Superadmin assigns user to division: POST /divisions/:id/members",
+        "3. Division admin sees new member in team list",
+        "4. Division admin sets initial permissions: PATCH /division-admin/team/:userId/permissions",
+        "5. New member can now access assigned modules"
+      ]
+    },
+    "adjusting_permissions": {
+      "steps": [
+        "1. Division admin views team: GET /division-admin/team",
+        "2. Identifies member who needs more/less access",
+        "3. Updates specific module permission: PATCH /division-admin/team/:userId/permissions",
+        "4. Verifies change in permissions matrix: GET /division-admin/permissions-matrix"
+      ]
+    },
+    "viewing_team_access": {
+      "steps": [
+        "1. GET /division-admin/permissions-matrix",
+        "2. Review which team members have access to what",
+        "3. Identify gaps or over-permissions",
+        "4. Make adjustments as needed"
+      ]
+    }
+  },
+  "error_handling": {
+    "403_errors": {
+      "not_division_admin": "Redirect to home or show 'Access Denied' message",
+      "wrong_division": "Show error: 'Cannot manage users from other divisions'",
+      "cannot_modify_admin": "Show error: 'Cannot modify other division admin permissions'"
+    },
+    "404_errors": {
+      "no_division": "User is not assigned as division admin anywhere",
+      "module_not_found": "Invalid module code in request"
+    },
+    "validation_errors": {
+      "missing_fields": "Highlight required fields in form"
+    }
+  },
+  "best_practices": {
+    "permission_updates": [
+      "Always update one module at a time for clarity",
+      "Show confirmation before saving permission changes",
+      "Provide undo option or change history",
+      "Log permission changes for audit trail"
+    ],
+    "ui_ux": [
+      "Clearly indicate which division the admin manages",
+      "Disable edit buttons for other division admins",
+      "Show loading states during API calls",
+      "Display success/error toasts after actions",
+      "Implement optimistic UI updates where appropriate"
+    ],
+    "security": [
+      "Never allow editing own permissions (prevent lock-out)",
+      "Always verify division admin status on each request",
+      "Handle token expiration gracefully"
+    ]
+  },
+  "testing_checklist": {
+    "as_division_admin": [
+      "✓ Can view own division info",
+      "✓ Can see all team members in division",
+      "✓ Can update team member permissions",
+      "✓ Can view permissions matrix",
+      "✗ Cannot access other divisions' data",
+      "✗ Cannot modify superadmin permissions",
+      "✗ Cannot promote users to division admin"
+    ],
+    "as_regular_user": [
+      "✗ Cannot access any /division-admin endpoints",
+      "✗ Gets 403 error when trying to access division admin features"
+    ],
+    "as_superadmin": [
+      "✓ Can access division admin endpoints (inherits permissions)",
+      "✓ Can also use superadmin endpoints to manage all divisions"
+    ]
+  }
+}

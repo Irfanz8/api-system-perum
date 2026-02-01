@@ -70,6 +70,112 @@ export const authenticateUser = async (req, res, next) => {
 };
 
 /**
+ * Middleware untuk memeriksa apakah user adalah division admin
+ */
+export const isDivisionAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Superadmin bypass
+    if (req.user.role === ROLES.SUPERADMIN) {
+      return next();
+    }
+
+    // Check if user is division admin of any division
+    const result = await db`
+      SELECT 1 FROM user_divisions
+      WHERE user_id = ${req.user.id} AND is_division_admin = true
+      LIMIT 1
+    `;
+
+    if (result.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must be a division admin to perform this action'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Division admin check error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Authorization check failed'
+    });
+  }
+};
+
+/**
+ * Middleware untuk memeriksa apakah user dapat manage target user
+ * (same division and requester is division admin)
+ */
+export const canManageUser = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Superadmin bypass
+    if (req.user.role === ROLES.SUPERADMIN) {
+      return next();
+    }
+
+    const targetUserId = req.params.userId || req.body.userId;
+    if (!targetUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Target user ID is required'
+      });
+    }
+
+    // Check if both users are in the same division and requester is admin
+    const result = await db`
+      SELECT 
+        ud1.division_id,
+        ud1.is_division_admin as requester_is_admin,
+        ud2.is_division_admin as target_is_admin
+      FROM user_divisions ud1
+      JOIN user_divisions ud2 ON ud1.division_id = ud2.division_id
+      WHERE ud1.user_id = ${req.user.id} 
+      AND ud2.user_id = ${targetUserId}
+      AND ud1.is_division_admin = true
+    `;
+
+    if (result.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only manage users in your division'
+      });
+    }
+
+    // Cannot manage other division admins
+    if (result[0].target_is_admin && req.user.id !== targetUserId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You cannot manage other division admins'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Can manage user check error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Authorization check failed'
+    });
+  }
+};
+
+
+/**
  * Middleware untuk memeriksa role user
  */
 export const authorizeRoles = (...roles) => {

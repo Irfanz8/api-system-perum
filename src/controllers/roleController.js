@@ -1,5 +1,5 @@
 import db from '../config/database.js';
-import supabase from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabase.js';
 import { ROLES, isValidRole } from '../utils/roles.js';
 import { getRolePermissions, PERMISSIONS } from '../middleware/permissions.js';
 
@@ -286,7 +286,9 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    const { data: { user }, error: supabaseError } = await supabase.auth.admin.updateUserById(id, {
+    
+
+    const { data: { user }, error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(id, {
       user_metadata: { role }
     });
 

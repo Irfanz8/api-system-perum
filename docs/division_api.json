@@ -1,0 +1,549 @@
+{
+  "endpoints": {
+    "divisions": {
+      "get_all": {
+        "method": "GET",
+        "path": "/divisions",
+        "auth": "required",
+        "role": "any authenticated user",
+        "description": "Get all divisions with user count and admin count",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {token}"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "data": [
+            {
+              "id": "uuid",
+              "name": "Keuangan",
+              "code": "KEU",
+              "description": "Divisi Keuangan - mengelola transaksi dan laporan keuangan",
+              "is_active": true,
+              "user_count": 4,
+              "admin_count": 1,
+              "created_at": "2026-01-01T00:00:00Z"
+            }
+          ]
+        }
+      },
+      "get_by_id": {
+        "method": "GET",
+        "path": "/divisions/:id",
+        "auth": "required",
+        "role": "any authenticated user",
+        "description": "Get single division by ID",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {token}"
+          },
+          "params": {
+            "id": "division UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "data": {
+            "id": "uuid",
+            "name": "Keuangan",
+            "code": "KEU",
+            "description": "Divisi Keuangan",
+            "is_active": true,
+            "user_count": 4,
+            "admin_count": 1,
+            "created_at": "2026-01-01T00:00:00Z"
+          }
+        }
+      },
+      "create": {
+        "method": "POST",
+        "path": "/divisions",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Create new division",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Marketing",
+            "code": "MKT",
+            "description": "Divisi Marketing"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Division created successfully",
+          "data": {
+            "id": "uuid",
+            "name": "Marketing",
+            "code": "MKT",
+            "description": "Divisi Marketing",
+            "is_active": true,
+            "created_at": "2026-01-01T00:00:00Z"
+          }
+        }
+      },
+      "update": {
+        "method": "PUT",
+        "path": "/divisions/:id",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Update existing division",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}",
+            "Content-Type": "application/json"
+          },
+          "params": {
+            "id": "division UUID"
+          },
+          "body": {
+            "name": "Keuangan Updated",
+            "code": "KEU",
+            "description": "Updated description",
+            "is_active": true
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Division updated successfully",
+          "data": {
+            "id": "uuid",
+            "name": "Keuangan Updated",
+            "code": "KEU",
+            "is_active": true
+          }
+        }
+      },
+      "delete": {
+        "method": "DELETE",
+        "path": "/divisions/:id",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Delete division (cascades to user_divisions)",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}"
+          },
+          "params": {
+            "id": "division UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Division deleted successfully"
+        }
+      },
+      "get_members": {
+        "method": "GET",
+        "path": "/divisions/:id/users",
+        "auth": "required",
+        "role": "admin or superadmin",
+        "description": "Get all members in a division",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {admin_token}"
+          },
+          "params": {
+            "id": "division UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "division": {
+            "id": "uuid",
+            "name": "Keuangan",
+            "code": "KEU"
+          },
+          "count": 4,
+          "data": [
+            {
+              "id": "user-uuid",
+              "email": "admin.keuangan@perum.com",
+              "username": "Admin Keuangan",
+              "role": "user",
+              "is_division_admin": true,
+              "assigned_at": "2026-01-01T00:00:00Z",
+              "assigned_by_email": "superadmin@perum.com"
+            },
+            {
+              "id": "user-uuid-2",
+              "email": "budi.santoso@perum.com",
+              "username": "Budi Santoso",
+              "role": "user",
+              "is_division_admin": false,
+              "assigned_at": "2026-01-02T00:00:00Z",
+              "assigned_by_email": null
+            }
+          ]
+        }
+      },
+      "assign_admin": {
+        "method": "POST",
+        "path": "/divisions/:id/admin",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Assign user as division admin (can promote existing member or add new)",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}",
+            "Content-Type": "application/json"
+          },
+          "params": {
+            "id": "division UUID"
+          },
+          "body": {
+            "userId": "user UUID to promote"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Admin Keuangan assigned as division admin",
+          "data": {
+            "division": {
+              "id": "uuid",
+              "name": "Keuangan"
+            },
+            "admin": {
+              "id": "user-uuid",
+              "email": "admin.keuangan@perum.com",
+              "username": "Admin Keuangan"
+            },
+            "assignment": {
+              "user_id": "uuid",
+              "division_id": "uuid",
+              "is_division_admin": true
+            }
+          }
+        }
+      },
+      "remove_admin": {
+        "method": "DELETE",
+        "path": "/divisions/:id/admin/:userId",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Remove division admin (user stays in division, just loses admin flag)",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}"
+          },
+          "params": {
+            "id": "division UUID",
+            "userId": "user UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Admin Keuangan removed as division admin (masih di divisi Keuangan)",
+          "data": {
+            "user_id": "uuid",
+            "division_id": "uuid",
+            "is_division_admin": false
+          }
+        }
+      },
+      "add_member": {
+        "method": "POST",
+        "path": "/divisions/:id/members",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Add user to division as regular member",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}",
+            "Content-Type": "application/json"
+          },
+          "params": {
+            "id": "division UUID"
+          },
+          "body": {
+            "userId": "user UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "User added to division successfully",
+          "data": {
+            "id": "assignment-uuid",
+            "user_id": "uuid",
+            "division_id": "uuid",
+            "is_division_admin": false,
+            "assigned_by": "superadmin-uuid"
+          }
+        }
+      },
+      "remove_member": {
+        "method": "DELETE",
+        "path": "/divisions/:id/members/:userId",
+        "auth": "required",
+        "role": "superadmin only",
+        "description": "Remove user from division completely",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {superadmin_token}"
+          },
+          "params": {
+            "id": "division UUID",
+            "userId": "user UUID"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "User removed from division successfully"
+        }
+      }
+    },
+    "division_admin": {
+      "get_my_division": {
+        "method": "GET",
+        "path": "/division-admin/my-division",
+        "auth": "required",
+        "role": "division admin",
+        "description": "Get division info where current user is admin",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {division_admin_token}"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "data": {
+            "id": "uuid",
+            "name": "Keuangan",
+            "code": "KEU",
+            "description": "Divisi Keuangan",
+            "is_active": true,
+            "member_count": 4,
+            "admin_since": "2026-01-01T00:00:00Z"
+          }
+        }
+      },
+      "get_team": {
+        "method": "GET",
+        "path": "/division-admin/team",
+        "auth": "required",
+        "role": "division admin",
+        "description": "Get all team members in division admin's division",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {division_admin_token}"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "division": {
+            "id": "uuid",
+            "name": "Keuangan",
+            "code": "KEU"
+          },
+          "count": 4,
+          "data": [
+            {
+              "id": "user-uuid",
+              "username": "Budi Santoso",
+              "email": "budi.santoso@perum.com",
+              "role": "user",
+              "is_division_admin": false,
+              "joined_at": "2026-01-02T00:00:00Z",
+              "permissions": [
+                {
+                  "module_id": "uuid",
+                  "module_code": "keuangan",
+                  "module_name": "Keuangan",
+                  "can_view": true,
+                  "can_create": false,
+                  "can_update": false,
+                  "can_delete": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "update_member_permissions": {
+        "method": "PATCH",
+        "path": "/division-admin/team/:userId/permissions",
+        "auth": "required",
+        "role": "division admin",
+        "description": "Update team member's permissions (can only manage users in same division)",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {division_admin_token}",
+            "Content-Type": "application/json"
+          },
+          "params": {
+            "userId": "team member UUID"
+          },
+          "body": {
+            "moduleCode": "keuangan",
+            "permissions": {
+              "can_view": true,
+              "can_create": true,
+              "can_update": true,
+              "can_delete": false
+            }
+          }
+        },
+        "response_example": {
+          "success": true,
+          "message": "Permissions berhasil diupdate",
+          "data": {
+            "id": "uuid",
+            "user_id": "uuid",
+            "module_id": "uuid",
+            "can_view": true,
+            "can_create": true,
+            "can_update": true,
+            "can_delete": false,
+            "granted_by": "division-admin-uuid"
+          }
+        },
+        "error_example": {
+          "success": false,
+          "error": "You can only manage users in your division"
+        }
+      },
+      "get_permissions_matrix": {
+        "method": "GET",
+        "path": "/division-admin/permissions-matrix",
+        "auth": "required",
+        "role": "division admin",
+        "description": "Get permissions matrix for all team members",
+        "request": {
+          "headers": {
+            "Authorization": "Bearer {division_admin_token}"
+          }
+        },
+        "response_example": {
+          "success": true,
+          "modules": [
+            {
+              "code": "dashboard",
+              "name": "Dashboard",
+              "icon": "home"
+            },
+            {
+              "code": "keuangan",
+              "name": "Keuangan",
+              "icon": "wallet"
+            }
+          ],
+          "matrix": [
+            {
+              "user": {
+                "id": "uuid",
+                "username": "Budi Santoso",
+                "email": "budi@perum.com",
+                "role": "user"
+              },
+              "permissions": {
+                "dashboard": {
+                  "can_view": true,
+                  "can_create": false,
+                  "can_update": false,
+                  "can_delete": false
+                },
+                "keuangan": {
+                  "can_view": true,
+                  "can_create": true,
+                  "can_update": false,
+                  "can_delete": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "error_responses": {
+    "401_unauthorized": {
+      "success": false,
+      "error": "No authorization token provided"
+    },
+    "403_forbidden_not_superadmin": {
+      "success": false,
+      "error": "Access denied. Superadmin only."
+    },
+    "403_forbidden_not_division_admin": {
+      "success": false,
+      "error": "You must be a division admin to perform this action"
+    },
+    "403_forbidden_wrong_division": {
+      "success": false,
+      "error": "You can only manage users in your division"
+    },
+    "404_not_found": {
+      "success": false,
+      "error": "Division not found"
+    },
+    "400_validation": {
+      "success": false,
+      "error": "Name and code are required"
+    }
+  },
+  "role_permissions": {
+    "superadmin": {
+      "can_access": [
+        "all division endpoints",
+        "assign/remove division admins",
+        "add/remove members",
+        "create/update/delete divisions"
+      ]
+    },
+    "division_admin": {
+      "can_access": [
+        "get own division info",
+        "view team members",
+        "update team permissions",
+        "view permissions matrix"
+      ],
+      "cannot_access": [
+        "other divisions",
+        "assign other division admins",
+        "superadmin functions"
+      ]
+    },
+    "regular_user": {
+      "can_access": [
+        "view divisions list",
+        "view division details"
+      ],
+      "cannot_access": [
+        "manage divisions",
+        "manage members",
+        "update permissions"
+      ]
+    }
+  },
+  "frontend_integration_tips": {
+    "authentication": "Store JWT token from login response, send in Authorization header",
+    "role_based_ui": "Check user.role from /api/auth/me to show/hide features",
+    "division_admin_check": "Call /division-admin/my-division to check if user is division admin",
+    "error_handling": "Always check success field, display error message to user",
+    "loading_states": "Show loading spinner during API calls",
+    "pagination": "Most list endpoints return full data, consider implementing FE pagination if needed"
+  },
+  "common_workflows": {
+    "superadmin_assigns_division_admin": [
+      "1. GET /api/users - get all users",
+      "2. GET /api/divisions - get divisions",
+      "3. POST /api/divisions/:id/admin with userId - assign admin",
+      "4. Verify with GET /api/divisions/:id/users"
+    ],
+    "division_admin_manages_team": [
+      "1. GET /api/division-admin/my-division - get division info",
+      "2. GET /api/division-admin/team - get team members",
+      "3. PATCH /api/division-admin/team/:userId/permissions - update permissions",
+      "4. GET /api/division-admin/permissions-matrix - view updated matrix"
+    ],
+    "view_division_structure": [
+      "1. GET /api/divisions - get all divisions",
+      "2. For each division, GET /api/divisions/:id/users - get members",
+      "3. Display in tree/table view"
+    ]
+  }
+}
