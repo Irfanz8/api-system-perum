@@ -183,20 +183,6 @@ export const signUp = async (req, res) => {
 
     const needsVerification = data.user && !data.session;
     
-    // Get actual role from database
-    let userRole = ROLES.USER;
-    if (data.user) {
-      try {
-        const roleResult = await db`SELECT role FROM users WHERE id = ${data.user.id}`;
-        if (roleResult.length > 0 && roleResult[0].role) {
-          userRole = roleResult[0].role;
-        }
-      } catch (dbError) {
-        console.error('Error fetching role from database:', dbError);
-        userRole = data.user.user_metadata?.role || ROLES.USER;
-      }
-    }
-    
     res.status(201).json({
       success: true,
       message: needsVerification 
@@ -208,7 +194,7 @@ export const signUp = async (req, res) => {
           id: data.user?.id,
           email: data.user?.email,
           name: data.user?.user_metadata?.name || data.user?.email,
-          role: userRole
+          role: data.user?.user_metadata?.role || ROLES.USER
         },
         session: data.session ? {
           access_token: data.session.access_token,
@@ -436,18 +422,6 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // Get actual role from database
-    let updatedUserRole = ROLES.USER;
-    try {
-      const roleResult = await db`SELECT role FROM users WHERE id = ${userId}`;
-      if (roleResult.length > 0 && roleResult[0].role) {
-        updatedUserRole = roleResult[0].role;
-      }
-    } catch (dbError) {
-      console.error('Error fetching role from database:', dbError);
-      updatedUserRole = data.user.user_metadata?.role || ROLES.USER;
-    }
-
     res.json({
       success: true,
       message: 'Profile berhasil diupdate',
@@ -455,7 +429,7 @@ export const updateProfile = async (req, res) => {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata.name || data.user.email,
-        role: updatedUserRole
+        role: data.user.user_metadata.role || ROLES.USER
       }
     });
   } catch (error) {
