@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as roleController from '../controllers/roleController.js';
+import { authenticateUser, isSuperAdmin } from '../middleware/auth.js';
+
 const router = express.Router();
-const roleController = require('../controllers/roleController');
-const { authenticateUser, isSuperAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -57,7 +58,7 @@ router.get('/hierarchy', authenticateUser, isSuperAdmin, roleController.getRoleH
  *       200:
  *         description: Role permissions
  */
-router.get('/:role/permissions', authenticateUser, isSuperAdmin, roleController.getRolePermissions);
+router.get('/:role/permissions', authenticateUser, isSuperAdmin, roleController.getRolePermissionsHandler);
 
 /**
  * @swagger
@@ -178,4 +179,4 @@ router.get('/statistics', authenticateUser, isSuperAdmin, roleController.getRole
  */
 router.get('/:role/features', authenticateUser, isSuperAdmin, roleController.getRoleFeatureAccess);
 
-module.exports = router;
+export default router;

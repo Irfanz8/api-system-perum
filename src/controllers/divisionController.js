@@ -1,11 +1,11 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 /**
  * Get all divisions
  */
-const getAllDivisions = async (req, res) => {
+export const getAllDivisions = async (req, res) => {
   try {
-    const query = `
+    const result = await db`
       SELECT 
         d.*,
         COUNT(ud.user_id) as user_count
@@ -14,11 +14,10 @@ const getAllDivisions = async (req, res) => {
       GROUP BY d.id
       ORDER BY d.name ASC
     `;
-    const result = await db.query(query);
 
     res.json({
       success: true,
-      data: result.rows
+      data: result
     });
   } catch (error) {
     console.error('Error getting divisions:', error);
@@ -32,22 +31,21 @@ const getAllDivisions = async (req, res) => {
 /**
  * Get division by ID
  */
-const getDivisionById = async (req, res) => {
+export const getDivisionById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = `
+    const result = await db`
       SELECT 
         d.*,
         COUNT(ud.user_id) as user_count
       FROM divisions d
       LEFT JOIN user_divisions ud ON d.id = ud.division_id
-      WHERE d.id = $1
+      WHERE d.id = ${id}
       GROUP BY d.id
     `;
-    const result = await db.query(query, [id]);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Division not found'
@@ -56,7 +54,7 @@ const getDivisionById = async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error getting division:', error);
@@ -70,7 +68,7 @@ const getDivisionById = async (req, res) => {
 /**
  * Create new division (superadmin only)
  */
-const createDivision = async (req, res) => {
+export const createDivision = async (req, res) => {
   try {
     const { name, code, description } = req.body;
 
@@ -81,17 +79,16 @@ const createDivision = async (req, res) => {
       });
     }
 
-    const query = `
+    const result = await db`
       INSERT INTO divisions (name, code, description)
-      VALUES ($1, $2, $3)
+      VALUES (${name}, ${code.toUpperCase()}, ${description})
       RETURNING *
     `;
-    const result = await db.query(query, [name, code.toUpperCase(), description]);
 
     res.status(201).json({
       success: true,
       message: 'Division created successfully',
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error creating division:', error);
@@ -111,23 +108,22 @@ const createDivision = async (req, res) => {
 /**
  * Update division (superadmin only)
  */
-const updateDivision = async (req, res) => {
+export const updateDivision = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, code, description, is_active } = req.body;
 
-    const query = `
+    const result = await db`
       UPDATE divisions
-      SET name = COALESCE($1, name),
-          code = COALESCE($2, code),
-          description = COALESCE($3, description),
-          is_active = COALESCE($4, is_active)
-      WHERE id = $5
+      SET name = COALESCE(${name}, name),
+          code = COALESCE(${code?.toUpperCase() || null}, code),
+          description = COALESCE(${description}, description),
+          is_active = COALESCE(${is_active}, is_active)
+      WHERE id = ${id}
       RETURNING *
     `;
-    const result = await db.query(query, [name, code?.toUpperCase(), description, is_active, id]);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Division not found'
@@ -137,7 +133,7 @@ const updateDivision = async (req, res) => {
     res.json({
       success: true,
       message: 'Division updated successfully',
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error updating division:', error);
@@ -157,14 +153,13 @@ const updateDivision = async (req, res) => {
 /**
  * Delete division (superadmin only)
  */
-const deleteDivision = async (req, res) => {
+export const deleteDivision = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = 'DELETE FROM divisions WHERE id = $1 RETURNING *';
-    const result = await db.query(query, [id]);
+    const result = await db`DELETE FROM divisions WHERE id = ${id} RETURNING *`;
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Division not found'
@@ -187,11 +182,11 @@ const deleteDivision = async (req, res) => {
 /**
  * Get users in a division
  */
-const getDivisionUsers = async (req, res) => {
+export const getDivisionUsers = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = `
+    const result = await db`
       SELECT 
         u.id,
         u.email,
@@ -202,14 +197,13 @@ const getDivisionUsers = async (req, res) => {
       FROM user_divisions ud
       JOIN users u ON ud.user_id = u.id
       LEFT JOIN users assigner ON ud.assigned_by = assigner.id
-      WHERE ud.division_id = $1
+      WHERE ud.division_id = ${id}
       ORDER BY u.email ASC
     `;
-    const result = await db.query(query, [id]);
 
     res.json({
       success: true,
-      data: result.rows
+      data: result
     });
   } catch (error) {
     console.error('Error getting division users:', error);
@@ -223,9 +217,9 @@ const getDivisionUsers = async (req, res) => {
 /**
  * Assign user to division (admin/superadmin)
  */
-const assignUserToDivision = async (req, res) => {
+export const assignUserToDivision = async (req, res) => {
   try {
-    const { id } = req.params; // division_id
+    const { id } = req.params;
     const { user_id } = req.body;
 
     if (!user_id) {
@@ -235,17 +229,16 @@ const assignUserToDivision = async (req, res) => {
       });
     }
 
-    const query = `
+    const result = await db`
       INSERT INTO user_divisions (user_id, division_id, assigned_by)
-      VALUES ($1, $2, $3)
+      VALUES (${user_id}, ${id}, ${req.user.id})
       RETURNING *
     `;
-    const result = await db.query(query, [user_id, id, req.user.id]);
 
     res.status(201).json({
       success: true,
       message: 'User assigned to division successfully',
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error assigning user to division:', error);
@@ -271,18 +264,17 @@ const assignUserToDivision = async (req, res) => {
 /**
  * Remove user from division
  */
-const removeUserFromDivision = async (req, res) => {
+export const removeUserFromDivision = async (req, res) => {
   try {
     const { id, userId } = req.params;
 
-    const query = `
+    const result = await db`
       DELETE FROM user_divisions 
-      WHERE division_id = $1 AND user_id = $2
+      WHERE division_id = ${id} AND user_id = ${userId}
       RETURNING *
     `;
-    const result = await db.query(query, [id, userId]);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User not found in this division'
@@ -300,15 +292,4 @@ const removeUserFromDivision = async (req, res) => {
       error: 'Failed to remove user from division'
     });
   }
-};
-
-module.exports = {
-  getAllDivisions,
-  getDivisionById,
-  createDivision,
-  updateDivision,
-  deleteDivision,
-  getDivisionUsers,
-  assignUserToDivision,
-  removeUserFromDivision
 };

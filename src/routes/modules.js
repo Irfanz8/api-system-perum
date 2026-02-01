@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as moduleController from '../controllers/moduleController.js';
+import { authenticateUser, isSuperAdmin } from '../middleware/auth.js';
+
 const router = express.Router();
-const moduleController = require('../controllers/moduleController');
-const { authenticateUser, isAdmin, isSuperAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -163,4 +164,4 @@ router.put('/:id', authenticateUser, isSuperAdmin, moduleController.updateModule
  */
 router.delete('/:id', authenticateUser, isSuperAdmin, moduleController.deleteModule);
 
-module.exports = router;
+export default router;

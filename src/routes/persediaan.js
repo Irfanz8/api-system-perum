@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import * as persediaanController from '../controllers/persediaanController.js';
+import { authenticateUser } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permissions.js';
+
 const router = express.Router();
-const persediaanController = require('../controllers/persediaanController');
-const { authenticateUser } = require('../middleware/auth');
-const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -269,4 +270,4 @@ router.patch('/:id/quantity', authenticateUser, checkPermission('PERSEDIAAN_UPDA
  */
 router.post('/:id/transaction', authenticateUser, checkPermission('PERSEDIAAN_TRANSACTION'), persediaanController.addInventoryTransaction);
 
-module.exports = router;
+export default router;

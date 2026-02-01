@@ -1,12 +1,12 @@
-const db = require('../config/database');
-const supabase = require('../config/supabase');
-const { ROLES, isValidRole } = require('../utils/roles');
-const { getRolePermissions, PERMISSIONS } = require('../middleware/permissions');
+import db from '../config/database.js';
+import supabase from '../config/supabase.js';
+import { ROLES, isValidRole } from '../utils/roles.js';
+import { getRolePermissions, PERMISSIONS } from '../middleware/permissions.js';
 
 /**
  * Get role hierarchy dan informasi
  */
-exports.getRoleHierarchy = async (req, res) => {
+export const getRoleHierarchy = async (req, res) => {
   try {
     const hierarchy = {
       superadmin: {
@@ -50,7 +50,7 @@ exports.getRoleHierarchy = async (req, res) => {
 /**
  * Get permissions untuk suatu role
  */
-exports.getRolePermissions = async (req, res) => {
+export const getRolePermissionsHandler = async (req, res) => {
   try {
     const { role } = req.params;
 
@@ -64,7 +64,6 @@ exports.getRolePermissions = async (req, res) => {
     const permissions = getRolePermissions(role);
     const permissionDetails = {};
 
-    // Get detail setiap permission
     for (const permission of permissions) {
       permissionDetails[permission] = {
         allowed: true,
@@ -93,11 +92,10 @@ exports.getRolePermissions = async (req, res) => {
 /**
  * Get all permissions matrix
  */
-exports.getPermissionsMatrix = async (req, res) => {
+export const getPermissionsMatrix = async (req, res) => {
   try {
     const matrix = {};
 
-    // Build matrix untuk setiap permission
     for (const [permission, allowedRoles] of Object.entries(PERMISSIONS)) {
       matrix[permission] = {
         superadmin: allowedRoles.includes(ROLES.SUPERADMIN),
@@ -129,9 +127,9 @@ exports.getPermissionsMatrix = async (req, res) => {
 /**
  * Get all users dengan role dan permissions mereka
  */
-exports.getUsersWithRoles = async (req, res) => {
+export const getUsersWithRoles = async (req, res) => {
   try {
-    const query = `
+    const result = await db`
       SELECT 
         id, 
         username, 
@@ -150,16 +148,13 @@ exports.getUsersWithRoles = async (req, res) => {
         END,
         created_at DESC
     `;
-    const result = await db.query(query);
 
-    // Tambahkan permissions untuk setiap user
-    const usersWithPermissions = result.rows.map(user => ({
+    const usersWithPermissions = result.map(user => ({
       ...user,
       permissions: getRolePermissions(user.role),
       permissionCount: getRolePermissions(user.role).length
     }));
 
-    // Group by role
     const groupedByRole = {
       superadmin: usersWithPermissions.filter(u => u.role === ROLES.SUPERADMIN),
       admin: usersWithPermissions.filter(u => u.role === ROLES.ADMIN),
@@ -190,7 +185,7 @@ exports.getUsersWithRoles = async (req, res) => {
 /**
  * Get users by role
  */
-exports.getUsersByRole = async (req, res) => {
+export const getUsersByRole = async (req, res) => {
   try {
     const { role } = req.params;
 
@@ -201,7 +196,7 @@ exports.getUsersByRole = async (req, res) => {
       });
     }
 
-    const query = `
+    const result = await db`
       SELECT 
         id, 
         username, 
@@ -210,17 +205,16 @@ exports.getUsersByRole = async (req, res) => {
         created_at, 
         updated_at
       FROM users 
-      WHERE role = $1
+      WHERE role = ${role}
       ORDER BY created_at DESC
     `;
-    const result = await db.query(query, [role]);
 
     res.json({
       success: true,
-      count: result.rows.length,
+      count: result.length,
       role,
       permissions: getRolePermissions(role),
-      data: result.rows
+      data: result
     });
   } catch (error) {
     console.error('Get users by role error:', error);
@@ -234,7 +228,7 @@ exports.getUsersByRole = async (req, res) => {
 /**
  * Update user role dengan validasi hierarki
  */
-exports.updateUserRole = async (req, res) => {
+export const updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
@@ -254,7 +248,6 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Validasi: Superadmin tidak bisa downgrade dirinya sendiri
     if (currentUser.id === id && currentUser.role === ROLES.SUPERADMIN && role !== ROLES.SUPERADMIN) {
       return res.status(403).json({
         success: false,
@@ -262,7 +255,6 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Validasi: Hanya superadmin yang bisa assign superadmin
     if (role === ROLES.SUPERADMIN && currentUser.role !== ROLES.SUPERADMIN) {
       return res.status(403).json({
         success: false,
@@ -270,20 +262,17 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Get user yang akan di-update
-    const userQuery = 'SELECT id, email, role FROM users WHERE id = $1';
-    const userResult = await db.query(userQuery, [id]);
+    const userResult = await db`SELECT id, email, role FROM users WHERE id = ${id}`;
 
-    if (userResult.rows.length === 0) {
+    if (userResult.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User tidak ditemukan'
       });
     }
 
-    const targetUser = userResult.rows[0];
+    const targetUser = userResult[0];
 
-    // Validasi: Tidak bisa mengubah role user yang levelnya sama atau lebih tinggi
     const roleLevels = {
       [ROLES.SUPERADMIN]: 3,
       [ROLES.ADMIN]: 2,
@@ -297,7 +286,6 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Update di Supabase Auth
     const { data: { user }, error: supabaseError } = await supabase.auth.admin.updateUserById(id, {
       user_metadata: { role }
     });
@@ -309,20 +297,18 @@ exports.updateUserRole = async (req, res) => {
       });
     }
 
-    // Update di database lokal
-    const updateQuery = `
+    const result = await db`
       UPDATE users 
-      SET role = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $2 
+      SET role = ${role}, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ${id} 
       RETURNING id, username, email, role, created_at, updated_at
     `;
-    const result = await db.query(updateQuery, [role, id]);
 
     res.json({
       success: true,
       message: `Role user berhasil diubah dari ${targetUser.role} menjadi ${role}`,
       data: {
-        ...result.rows[0],
+        ...result[0],
         oldRole: targetUser.role,
         newRole: role,
         permissions: getRolePermissions(role),
@@ -345,9 +331,9 @@ exports.updateUserRole = async (req, res) => {
 /**
  * Get role statistics
  */
-exports.getRoleStatistics = async (req, res) => {
+export const getRoleStatistics = async (req, res) => {
   try {
-    const query = `
+    const result = await db`
       SELECT 
         role,
         COUNT(*) as count,
@@ -362,7 +348,6 @@ exports.getRoleStatistics = async (req, res) => {
           WHEN 'user' THEN 3
         END
     `;
-    const result = await db.query(query);
 
     const statistics = {
       total: 0,
@@ -370,7 +355,7 @@ exports.getRoleStatistics = async (req, res) => {
       permissions: {}
     };
 
-    result.rows.forEach(row => {
+    result.forEach(row => {
       statistics.total += parseInt(row.count);
       statistics.byRole[row.role] = {
         count: parseInt(row.count),
@@ -396,9 +381,9 @@ exports.getRoleStatistics = async (req, res) => {
 };
 
 /**
- * Get feature access untuk suatu role (dengan detail endpoint)
+ * Get feature access untuk suatu role
  */
-exports.getRoleFeatureAccess = async (req, res) => {
+export const getRoleFeatureAccess = async (req, res) => {
   try {
     const { role } = req.params;
 
@@ -411,7 +396,6 @@ exports.getRoleFeatureAccess = async (req, res) => {
 
     const permissions = getRolePermissions(role);
     
-    // Group permissions by feature/module
     const featureAccess = {
       users: {
         name: 'User Management',
@@ -502,7 +486,6 @@ exports.getRoleFeatureAccess = async (req, res) => {
       }
     };
 
-    // Calculate summary
     const summary = {
       totalFeatures: Object.keys(featureAccess).length,
       accessibleFeatures: Object.values(featureAccess).filter(f => f.canAccess).length,

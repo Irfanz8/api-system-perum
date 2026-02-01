@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as divisionController from '../controllers/divisionController.js';
+import { authenticateUser, isAdmin, isSuperAdmin } from '../middleware/auth.js';
+
 const router = express.Router();
-const divisionController = require('../controllers/divisionController');
-const { authenticateUser, isAdmin, isSuperAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -231,4 +232,4 @@ router.post('/:id/users', authenticateUser, isAdmin, divisionController.assignUs
  */
 router.delete('/:id/users/:userId', authenticateUser, isAdmin, divisionController.removeUserFromDivision);
 
-module.exports = router;
+export default router;

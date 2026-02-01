@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import * as propertiController from '../controllers/propertiController.js';
+import * as penjualanController from '../controllers/penjualanController.js';
+import { authenticateUser } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permissions.js';
+
 const router = express.Router();
-const propertiController = require('../controllers/propertiController');
-const penjualanController = require('../controllers/penjualanController');
-const { authenticateUser } = require('../middleware/auth');
-const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -248,4 +249,4 @@ router.patch('/:id/status', authenticateUser, checkPermission('PROPERTI_UPDATE_S
 router.get('/:propertyId/sales', authenticateUser, checkPermission('PENJUALAN_READ'), penjualanController.getAllSales);
 router.post('/:propertyId/sales', authenticateUser, checkPermission('PENJUALAN_CREATE'), penjualanController.createSale);
 
-module.exports = router;
+export default router;

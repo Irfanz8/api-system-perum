@@ -1,7 +1,7 @@
-const FinancialTransaction = require('../models/FinancialTransaction');
+import FinancialTransaction from '../models/FinancialTransaction.js';
 
 // Get all financial transactions
-exports.getAllTransactions = async (req, res) => {
+export const getAllTransactions = async (req, res) => {
   try {
     const filters = {
       type: req.query.type,
@@ -26,7 +26,7 @@ exports.getAllTransactions = async (req, res) => {
 };
 
 // Get transaction by ID
-exports.getTransactionById = async (req, res) => {
+export const getTransactionById = async (req, res) => {
   try {
     const { id } = req.params;
     const transaction = await FinancialTransaction.getById(id);
@@ -51,11 +51,10 @@ exports.getTransactionById = async (req, res) => {
 };
 
 // Create new transaction
-exports.createTransaction = async (req, res) => {
+export const createTransaction = async (req, res) => {
   try {
     const { type, category, amount, description, transaction_date, property_id } = req.body;
 
-    // Validation
     if (!type || !category || !amount || !transaction_date) {
       return res.status(400).json({
         success: false,
@@ -103,12 +102,11 @@ exports.createTransaction = async (req, res) => {
 };
 
 // Update transaction
-exports.updateTransaction = async (req, res) => {
+export const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const { type, category, amount, description, transaction_date, property_id } = req.body;
 
-    // Validation
     if (type && !['income', 'expense'].includes(type)) {
       return res.status(400).json({
         success: false,
@@ -155,7 +153,7 @@ exports.updateTransaction = async (req, res) => {
 };
 
 // Delete transaction
-exports.deleteTransaction = async (req, res) => {
+export const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const transaction = await FinancialTransaction.delete(id);
@@ -181,7 +179,7 @@ exports.deleteTransaction = async (req, res) => {
 };
 
 // Get financial summary
-exports.getFinancialSummary = async (req, res) => {
+export const getFinancialSummary = async (req, res) => {
   try {
     const filters = {
       start_date: req.query.start_date,
@@ -190,7 +188,6 @@ exports.getFinancialSummary = async (req, res) => {
 
     const summary = await FinancialTransaction.getSummary(filters);
 
-    // Calculate totals
     let totalIncome = 0;
     let totalExpense = 0;
 

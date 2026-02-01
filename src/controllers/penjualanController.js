@@ -1,7 +1,7 @@
-const PropertySale = require('../models/PropertySale');
+import PropertySale from '../models/PropertySale.js';
 
 // Get all property sales
-exports.getAllSales = async (req, res) => {
+export const getAllSales = async (req, res) => {
   try {
     const filters = {
       status: req.query.status,
@@ -26,7 +26,7 @@ exports.getAllSales = async (req, res) => {
 };
 
 // Get sale by ID
-exports.getSaleById = async (req, res) => {
+export const getSaleById = async (req, res) => {
   try {
     const { id } = req.params;
     const sale = await PropertySale.getById(id);
@@ -51,7 +51,7 @@ exports.getSaleById = async (req, res) => {
 };
 
 // Create new sale
-exports.createSale = async (req, res) => {
+export const createSale = async (req, res) => {
   try {
     const { 
       property_id, 
@@ -64,7 +64,6 @@ exports.createSale = async (req, res) => {
       notes 
     } = req.body;
 
-    // Validation
     if (!property_id || !buyer_name || !sale_price || !sale_date) {
       return res.status(400).json({
         success: false,
@@ -107,7 +106,7 @@ exports.createSale = async (req, res) => {
 };
 
 // Update sale
-exports.updateSale = async (req, res) => {
+export const updateSale = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -121,7 +120,6 @@ exports.updateSale = async (req, res) => {
       notes 
     } = req.body;
 
-    // Validation
     if (sale_price && sale_price <= 0) {
       return res.status(400).json({
         success: false,
@@ -163,7 +161,7 @@ exports.updateSale = async (req, res) => {
 };
 
 // Delete sale
-exports.deleteSale = async (req, res) => {
+export const deleteSale = async (req, res) => {
   try {
     const { id } = req.params;
     const sale = await PropertySale.delete(id);
@@ -189,7 +187,7 @@ exports.deleteSale = async (req, res) => {
 };
 
 // Update sale status
-exports.updateSaleStatus = async (req, res) => {
+export const updateSaleStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -231,8 +229,8 @@ exports.updateSaleStatus = async (req, res) => {
   }
 };
 
-// Complete sale (creates financial transaction and updates property status)
-exports.completeSale = async (req, res) => {
+// Complete sale
+export const completeSale = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await PropertySale.completeSale(id);
@@ -258,7 +256,7 @@ exports.completeSale = async (req, res) => {
 };
 
 // Get sales statistics
-exports.getSalesStats = async (req, res) => {
+export const getSalesStats = async (req, res) => {
   try {
     const filters = {
       start_date: req.query.start_date,
@@ -267,13 +265,12 @@ exports.getSalesStats = async (req, res) => {
 
     const stats = await PropertySale.getSalesStats(filters);
     
-    // Calculate totals
     let totalSales = 0;
     let totalRevenue = 0;
 
     stats.forEach(item => {
       totalSales += parseInt(item.sale_count);
-      totalRevenue += parseFloat(item.total_revenue);
+      totalRevenue += parseFloat(item.total_revenue || 0);
     });
 
     res.json({
@@ -293,7 +290,7 @@ exports.getSalesStats = async (req, res) => {
 };
 
 // Get monthly revenue
-exports.getMonthlyRevenue = async (req, res) => {
+export const getMonthlyRevenue = async (req, res) => {
   try {
     const { year } = req.params;
     const revenue = await PropertySale.getMonthlyRevenue(parseInt(year));

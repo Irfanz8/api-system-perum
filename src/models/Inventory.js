@@ -1,43 +1,35 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 class Inventory {
   static async getAll(filters = {}) {
-    let query = 'SELECT * FROM inventory WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
-
+    const conditions = [];
+    
     if (filters.category) {
-      query += ` AND category = $${paramIndex}`;
-      params.push(filters.category);
-      paramIndex++;
+      conditions.push(db`category = ${filters.category}`);
     }
-
     if (filters.supplier) {
-      query += ` AND supplier = $${paramIndex}`;
-      params.push(filters.supplier);
-      paramIndex++;
+      conditions.push(db`supplier = ${filters.supplier}`);
     }
-
     if (filters.low_stock) {
-      query += ` AND quantity <= min_stock`;
+      conditions.push(db`quantity <= min_stock`);
     }
 
-    query += ` ORDER BY created_at DESC`;
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
 
-    if (filters.limit) {
-      query += ` LIMIT $${paramIndex}`;
-      params.push(filters.limit);
-      paramIndex++;
-    }
-
-    const result = await db.query(query, params);
-    return result.rows;
+    const result = await db`
+      SELECT * FROM inventory
+      ${whereClause}
+      ORDER BY created_at DESC
+      ${filters.limit ? db`LIMIT ${filters.limit}` : db``}
+    `;
+    return result;
   }
 
   static async getById(id) {
-    const query = 'SELECT * FROM inventory WHERE id = $1';
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    const result = await db`SELECT * FROM inventory WHERE id = ${id}`;
+    return result[0];
   }
 
   static async create(inventoryData) {
@@ -52,25 +44,12 @@ class Inventory {
       description 
     } = inventoryData;
     
-    const query = `
+    const result = await db`
       INSERT INTO inventory (name, category, quantity, unit, unit_price, supplier, min_stock, description)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES (${name}, ${category}, ${quantity || 0}, ${unit}, ${unit_price}, ${supplier}, ${min_stock || 0}, ${description})
       RETURNING *
     `;
-    
-    const values = [
-      name, 
-      category, 
-      quantity || 0, 
-      unit, 
-      unit_price, 
-      supplier, 
-      min_stock || 0, 
-      description
-    ];
-    
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async update(id, inventoryData) {
@@ -85,77 +64,52 @@ class Inventory {
       description 
     } = inventoryData;
     
-    const query = `
+    const result = await db`
       UPDATE inventory
-      SET name = $1, category = $2, quantity = $3, unit = $4, unit_price = $5, 
-          supplier = $6, min_stock = $7, description = $8
-      WHERE id = $9
+      SET name = ${name}, category = ${category}, quantity = ${quantity}, unit = ${unit}, unit_price = ${unit_price}, 
+          supplier = ${supplier}, min_stock = ${min_stock}, description = ${description}
+      WHERE id = ${id}
       RETURNING *
     `;
-    
-    const values = [
-      name, 
-      category, 
-      quantity, 
-      unit, 
-      unit_price, 
-      supplier, 
-      min_stock, 
-      description,
-      id
-    ];
-    
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async delete(id) {
-    const query = 'DELETE FROM inventory WHERE id = $1 RETURNING *';
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    const result = await db`DELETE FROM inventory WHERE id = ${id} RETURNING *`;
+    return result[0];
   }
 
   static async updateQuantity(id, quantity) {
-    const query = 'UPDATE inventory SET quantity = $1 WHERE id = $2 RETURNING *';
-    const result = await db.query(query, [quantity, id]);
-    return result.rows[0];
+    const result = await db`UPDATE inventory SET quantity = ${quantity} WHERE id = ${id} RETURNING *`;
+    return result[0];
   }
 
   static async getTransactionHistory(inventoryId) {
-    const query = `
+    const result = await db`
       SELECT it.*, u.username as created_by_name
       FROM inventory_transactions it
       LEFT JOIN users u ON it.created_by = u.id
-      WHERE it.inventory_id = $1
+      WHERE it.inventory_id = ${inventoryId}
       ORDER BY it.transaction_date DESC
     `;
-    const result = await db.query(query, [inventoryId]);
-    return result.rows;
+    return result;
   }
 
   static async addTransaction(transactionData) {
     const { inventory_id, type, quantity, description, transaction_date, created_by } = transactionData;
     
-    // Start transaction
-    const client = await db.pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
+    // Use postgres.js transaction
+    return await db.begin(async sql => {
       // Add transaction record
-      const transactionQuery = `
+      const [transaction] = await sql`
         INSERT INTO inventory_transactions (inventory_id, type, quantity, description, transaction_date, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES (${inventory_id}, ${type}, ${quantity}, ${description}, ${transaction_date}, ${created_by})
         RETURNING *
       `;
-      const transactionResult = await client.query(transactionQuery, [
-        inventory_id, type, quantity, description, transaction_date, created_by
-      ]);
       
-      // Update inventory quantity
-      const currentInventoryQuery = 'SELECT quantity FROM inventory WHERE id = $1';
-      const currentInventoryResult = await client.query(currentInventoryQuery, [inventory_id]);
-      const currentQuantity = currentInventoryResult.rows[0].quantity;
+      // Get current inventory quantity
+      const [currentInventory] = await sql`SELECT quantity FROM inventory WHERE id = ${inventory_id}`;
+      const currentQuantity = currentInventory.quantity;
       
       let newQuantity;
       if (type === 'in') {
@@ -170,31 +124,22 @@ class Inventory {
         throw new Error('Insufficient inventory quantity');
       }
       
-      const updateInventoryQuery = 'UPDATE inventory SET quantity = $1 WHERE id = $2';
-      await client.query(updateInventoryQuery, [newQuantity, inventory_id]);
-      
-      await client.query('COMMIT');
+      await sql`UPDATE inventory SET quantity = ${newQuantity} WHERE id = ${inventory_id}`;
       
       return {
-        transaction: transactionResult.rows[0],
+        transaction,
         new_quantity: newQuantity
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   static async getLowStockItems() {
-    const query = 'SELECT * FROM inventory WHERE quantity <= min_stock ORDER BY quantity ASC';
-    const result = await db.query(query);
-    return result.rows;
+    const result = await db`SELECT * FROM inventory WHERE quantity <= min_stock ORDER BY quantity ASC`;
+    return result;
   }
 
   static async getInventoryStats() {
-    const query = `
+    const result = await db`
       SELECT 
         category,
         COUNT(*) as item_count,
@@ -204,9 +149,8 @@ class Inventory {
       GROUP BY category
       ORDER BY total_value DESC
     `;
-    const result = await db.query(query);
-    return result.rows;
+    return result;
   }
 }
 
-module.exports = Inventory;
+export default Inventory;

@@ -1,66 +1,50 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 class PropertySale {
   static async getAll(filters = {}) {
-    let query = `
+    const conditions = [];
+    
+    if (filters.status) {
+      conditions.push(db`ps.status = ${filters.status}`);
+    }
+    if (filters.buyer_name) {
+      conditions.push(db`ps.buyer_name ILIKE ${'%' + filters.buyer_name + '%'}`);
+    }
+    if (filters.start_date) {
+      conditions.push(db`ps.sale_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`ps.sale_date <= ${filters.end_date}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    const result = await db`
       SELECT ps.*, p.name as property_name, p.type as property_type, 
              u.username as created_by_name
       FROM property_sales ps
       LEFT JOIN properties p ON ps.property_id = p.id
       LEFT JOIN users u ON ps.created_by = u.id
-      WHERE 1=1
+      ${whereClause}
+      ORDER BY ps.sale_date DESC, ps.created_at DESC
+      ${filters.limit ? db`LIMIT ${filters.limit}` : db``}
     `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (filters.status) {
-      query += ` AND ps.status = $${paramIndex}`;
-      params.push(filters.status);
-      paramIndex++;
-    }
-
-    if (filters.buyer_name) {
-      query += ` AND ps.buyer_name ILIKE $${paramIndex}`;
-      params.push(`%${filters.buyer_name}%`);
-      paramIndex++;
-    }
-
-    if (filters.start_date) {
-      query += ` AND ps.sale_date >= $${paramIndex}`;
-      params.push(filters.start_date);
-      paramIndex++;
-    }
-
-    if (filters.end_date) {
-      query += ` AND ps.sale_date <= $${paramIndex}`;
-      params.push(filters.end_date);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY ps.sale_date DESC, ps.created_at DESC`;
-
-    if (filters.limit) {
-      query += ` LIMIT $${paramIndex}`;
-      params.push(filters.limit);
-      paramIndex++;
-    }
-
-    const result = await db.query(query, params);
-    return result.rows;
+    return result;
   }
 
   static async getById(id) {
-    const query = `
+    const result = await db`
       SELECT ps.*, p.name as property_name, p.type as property_type, 
              p.address as property_address, p.price as property_price,
              u.username as created_by_name
       FROM property_sales ps
       LEFT JOIN properties p ON ps.property_id = p.id
       LEFT JOIN users u ON ps.created_by = u.id
-      WHERE ps.id = $1
+      WHERE ps.id = ${id}
     `;
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    return result[0];
   }
 
   static async create(saleData) {
@@ -76,26 +60,12 @@ class PropertySale {
       created_by 
     } = saleData;
     
-    const query = `
+    const result = await db`
       INSERT INTO property_sales (property_id, buyer_name, buyer_email, buyer_phone, sale_price, sale_date, status, notes, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES (${property_id}, ${buyer_name}, ${buyer_email}, ${buyer_phone}, ${sale_price}, ${sale_date}, ${status || 'pending'}, ${notes}, ${created_by})
       RETURNING *
     `;
-    
-    const values = [
-      property_id, 
-      buyer_name, 
-      buyer_email, 
-      buyer_phone, 
-      sale_price, 
-      sale_date, 
-      status || 'pending', 
-      notes, 
-      created_by
-    ];
-    
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async update(id, saleData) {
@@ -110,150 +80,95 @@ class PropertySale {
       notes 
     } = saleData;
     
-    const query = `
+    const result = await db`
       UPDATE property_sales
-      SET property_id = $1, buyer_name = $2, buyer_email = $3, buyer_phone = $4, 
-          sale_price = $5, sale_date = $6, status = $7, notes = $8
-      WHERE id = $9
+      SET property_id = ${property_id}, buyer_name = ${buyer_name}, buyer_email = ${buyer_email}, buyer_phone = ${buyer_phone}, 
+          sale_price = ${sale_price}, sale_date = ${sale_date}, status = ${status}, notes = ${notes}
+      WHERE id = ${id}
       RETURNING *
     `;
-    
-    const values = [
-      property_id, 
-      buyer_name, 
-      buyer_email, 
-      buyer_phone, 
-      sale_price, 
-      sale_date, 
-      status, 
-      notes,
-      id
-    ];
-    
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async delete(id) {
-    const query = 'DELETE FROM property_sales WHERE id = $1 RETURNING *';
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    const result = await db`DELETE FROM property_sales WHERE id = ${id} RETURNING *`;
+    return result[0];
   }
 
   static async updateStatus(id, status) {
-    const query = 'UPDATE property_sales SET status = $1 WHERE id = $2 RETURNING *';
-    const result = await db.query(query, [status, id]);
-    return result.rows[0];
+    const result = await db`UPDATE property_sales SET status = ${status} WHERE id = ${id} RETURNING *`;
+    return result[0];
   }
 
   static async completeSale(id) {
-    const client = await db.pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      // Get sale details
-      const saleQuery = 'SELECT * FROM property_sales WHERE id = $1 FOR UPDATE';
-      const saleResult = await client.query(saleQuery, [id]);
-      const sale = saleResult.rows[0];
+    return await db.begin(async sql => {
+      // Get sale details with lock
+      const [sale] = await sql`SELECT * FROM property_sales WHERE id = ${id} FOR UPDATE`;
       
       if (!sale) {
         throw new Error('Sale not found');
       }
       
       // Update sale status
-      const updateSaleQuery = 'UPDATE property_sales SET status = $1 WHERE id = $2';
-      await client.query(updateSaleQuery, ['completed', id]);
+      await sql`UPDATE property_sales SET status = 'completed' WHERE id = ${id}`;
       
       // Update property status
-      const updatePropertyQuery = 'UPDATE properties SET status = $1 WHERE id = $2';
-      await client.query(updatePropertyQuery, ['sold', sale.property_id]);
+      await sql`UPDATE properties SET status = 'sold' WHERE id = ${sale.property_id}`;
       
       // Add financial transaction
-      const transactionQuery = `
+      const [transaction] = await sql`
         INSERT INTO financial_transactions (type, category, amount, description, transaction_date, property_id, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ('income', 'penjualan', ${sale.sale_price}, ${'Penjualan properti: ' + sale.buyer_name}, ${sale.sale_date}, ${sale.property_id}, ${sale.created_by})
         RETURNING *
       `;
-      const transactionData = {
-        type: 'income',
-        category: 'penjualan',
-        amount: sale.sale_price,
-        description: `Penjualan properti: ${sale.buyer_name}`,
-        transaction_date: sale.sale_date,
-        property_id: sale.property_id,
-        created_by: sale.created_by
-      };
-      
-      const transactionResult = await client.query(transactionQuery, [
-        transactionData.type,
-        transactionData.category,
-        transactionData.amount,
-        transactionData.description,
-        transactionData.transaction_date,
-        transactionData.property_id,
-        transactionData.created_by
-      ]);
-      
-      await client.query('COMMIT');
       
       return {
         sale: { ...sale, status: 'completed' },
-        transaction: transactionResult.rows[0]
+        transaction
       };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   static async getSalesStats(filters = {}) {
-    let query = `
+    const conditions = [];
+    
+    if (filters.start_date) {
+      conditions.push(db`sale_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`sale_date <= ${filters.end_date}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    const result = await db`
       SELECT 
         status,
         COUNT(*) as sale_count,
         SUM(sale_price) as total_revenue
       FROM property_sales
-      WHERE 1=1
+      ${whereClause}
+      GROUP BY status
     `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (filters.start_date) {
-      query += ` AND sale_date >= $${paramIndex}`;
-      params.push(filters.start_date);
-      paramIndex++;
-    }
-
-    if (filters.end_date) {
-      query += ` AND sale_date <= $${paramIndex}`;
-      params.push(filters.end_date);
-      paramIndex++;
-    }
-
-    query += ` GROUP BY status`;
-
-    const result = await db.query(query, params);
-    return result.rows;
+    return result;
   }
 
   static async getMonthlyRevenue(year) {
-    const query = `
+    const result = await db`
       SELECT 
         EXTRACT(MONTH FROM sale_date) as month,
         COUNT(*) as sale_count,
         SUM(sale_price) as total_revenue
       FROM property_sales
-      WHERE EXTRACT(YEAR FROM sale_date) = $1
+      WHERE EXTRACT(YEAR FROM sale_date) = ${year}
         AND status = 'completed'
       GROUP BY EXTRACT(MONTH FROM sale_date)
       ORDER BY month
     `;
-    const result = await db.query(query, [year]);
-    return result.rows;
+    return result;
   }
 }
 
-module.exports = PropertySale;
+export default PropertySale;

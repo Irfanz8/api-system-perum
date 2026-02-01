@@ -1,15 +1,14 @@
-const supabase = require('../config/supabase');
-const db = require('../config/database');
-const { ROLES, isValidRole } = require('../utils/roles');
+import supabase from '../config/supabase.js';
+import db from '../config/database.js';
+import { ROLES, isValidRole } from '../utils/roles.js';
 
 /**
  * Get OAuth URL untuk berbagai provider
  */
-exports.getOAuthUrl = async (req, res) => {
+export const getOAuthUrl = async (req, res) => {
   try {
     const { provider = 'google', redirectTo = process.env.FRONTEND_URL } = req.query;
 
-    // Frontend already includes /auth/callback in redirectTo, just add provider query param
     const finalRedirectUrl = redirectTo.includes('/auth/callback') 
       ? `${redirectTo}?provider=${provider}` 
       : `${redirectTo}/auth/callback?provider=${provider}`;
@@ -28,7 +27,6 @@ exports.getOAuthUrl = async (req, res) => {
       });
     }
 
-    // Prevent caching - OAuth URLs should always be fresh
     res.set({
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
@@ -55,9 +53,8 @@ exports.getOAuthUrl = async (req, res) => {
 /**
  * Handle OAuth callback
  */
-exports.handleOAuthCallback = async (req, res) => {
+export const handleOAuthCallback = async (req, res) => {
   try {
-    // Support both POST body and GET query params
     const access_token = req.body?.access_token || req.query?.access_token;
     const refresh_token = req.body?.refresh_token || req.query?.refresh_token;
 
@@ -76,7 +73,6 @@ exports.handleOAuthCallback = async (req, res) => {
       });
     }
 
-    // Set session dengan Supabase
     const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token
@@ -98,7 +94,6 @@ exports.handleOAuthCallback = async (req, res) => {
       });
     }
 
-    // Simpan user ke database lokal jika belum ada
     await saveUserToDatabase(user, 'oauth');
 
     res.json({
@@ -129,7 +124,7 @@ exports.handleOAuthCallback = async (req, res) => {
 /**
  * Sign up dengan email dan password
  */
-exports.signUp = async (req, res) => {
+export const signUp = async (req, res) => {
   try {
     const { email, password, name, role = ROLES.USER } = req.body;
 
@@ -140,7 +135,6 @@ exports.signUp = async (req, res) => {
       });
     }
 
-    // Validasi role
     if (!isValidRole(role)) {
       return res.status(400).json({
         success: false,
@@ -148,8 +142,6 @@ exports.signUp = async (req, res) => {
       });
     }
 
-    // Hanya superadmin yang bisa membuat admin atau superadmin baru
-    // Untuk sekarang, default semua user baru adalah 'user'
     const finalRole = role === ROLES.USER ? ROLES.USER : ROLES.USER;
 
     const { data, error } = await supabase.auth.signUp({
@@ -172,12 +164,10 @@ exports.signUp = async (req, res) => {
       });
     }
 
-    // Simpan user ke database lokal jika user sudah terverifikasi atau tidak perlu verifikasi
     if (data.user) {
       await saveUserToDatabase(data.user, 'email');
     }
 
-    // Cek apakah email perlu diverifikasi
     const needsVerification = data.user && !data.session;
     
     res.status(201).json({
@@ -211,7 +201,7 @@ exports.signUp = async (req, res) => {
 /**
  * Sign in dengan email dan password
  */
-exports.signIn = async (req, res) => {
+export const signIn = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -230,7 +220,6 @@ exports.signIn = async (req, res) => {
     if (error) {
       console.error('Signin error:', error);
       
-      // Berikan error message yang lebih spesifik
       let errorMessage = 'Email atau password salah';
       
       if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
@@ -250,7 +239,6 @@ exports.signIn = async (req, res) => {
       });
     }
 
-    // Simpan user ke database lokal jika belum ada
     await saveUserToDatabase(data.user, 'email');
 
     res.json({
@@ -283,7 +271,7 @@ exports.signIn = async (req, res) => {
 /**
  * Sign out
  */
-exports.signOut = async (req, res) => {
+export const signOut = async (req, res) => {
   try {
     const { error } = await supabase.auth.signOut();
 
@@ -310,7 +298,7 @@ exports.signOut = async (req, res) => {
 /**
  * Refresh token
  */
-exports.refreshToken = async (req, res) => {
+export const refreshToken = async (req, res) => {
   try {
     const { refresh_token } = req.body;
 
@@ -352,9 +340,8 @@ exports.refreshToken = async (req, res) => {
 /**
  * Get current user profile
  */
-exports.getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   try {
-    // User sudah tersedia dari auth middleware
     res.json({
       success: true,
       data: req.user
@@ -371,7 +358,7 @@ exports.getProfile = async (req, res) => {
 /**
  * Update user profile
  */
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const { name, role } = req.body;
     const userId = req.user.id;
@@ -380,7 +367,6 @@ exports.updateProfile = async (req, res) => {
     const updates = {};
     if (name) updates.name = name;
     
-    // Hanya superadmin yang bisa mengubah role
     if (role) {
       if (userRole !== ROLES.SUPERADMIN) {
         return res.status(403).json({
@@ -430,9 +416,7 @@ exports.updateProfile = async (req, res) => {
 };
 
 /**
- * Fungsi helper untuk menyimpan user ke database lokal
- * @param {Object} user - User object dari Supabase Auth
- * @param {string} authMethod - 'email' untuk email/password, 'oauth' untuk OAuth
+ * Helper: Save user to database
  */
 async function saveUserToDatabase(user, authMethod = 'oauth') {
   try {
@@ -441,63 +425,100 @@ async function saveUserToDatabase(user, authMethod = 'oauth') {
       return;
     }
 
-    const checkQuery = 'SELECT id FROM users WHERE id = $1';
-    const checkResult = await db.query(checkQuery, [user.id]);
+    const checkResult = await db`SELECT id, role FROM users WHERE id = ${user.id}`;
 
     const username = user.user_metadata?.name?.replace(/\s+/g, '_').toLowerCase() || user.email.split('@')[0];
     const email = user.email;
     const role = user.user_metadata?.role || ROLES.USER;
-    
-    // Password hash: null untuk email/password (di-handle Supabase), 'oauth' untuk OAuth
     const passwordHash = authMethod === 'email' ? null : 'oauth';
 
-    if (checkResult.rows.length === 0) {
-      // User baru, insert
-      const insertQuery = `
-        INSERT INTO users (id, username, email, password_hash, role)
-        VALUES ($1, $2, $3, $4, $5)
+    let isNewUser = false;
+
+    if (checkResult.length === 0) {
+      isNewUser = true;
+      const result = await db`
+        INSERT INTO users (id, username, email, password_hash, role, is_active)
+        VALUES (${user.id}, ${username}, ${email}, ${passwordHash}, ${role}, true)
         ON CONFLICT (id) DO NOTHING
       `;
-      const result = await db.query(insertQuery, [
-        user.id,
-        username,
-        email,
-        passwordHash,
-        role
-      ]);
       
-      if (result.rowCount > 0) {
+      if (result.count > 0) {
         console.log('✅ User saved to local database:', email, `(${authMethod})`);
       }
     } else {
-      // User sudah ada, update metadata jika perlu
-      const updateQuery = `
+      await db`
         UPDATE users 
-        SET username = $1, 
-            email = $2, 
-            role = COALESCE($3, role),
+        SET username = ${username}, 
+            email = ${email}, 
+            role = COALESCE(${role}, role),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4
+        WHERE id = ${user.id}
       `;
-      await db.query(updateQuery, [
-        username,
-        email,
-        role,
-        user.id
-      ]);
       console.log('✅ User updated in local database:', email);
+    }
+
+    if (isNewUser) {
+      await assignDefaultRBAC(user.id, role);
     }
   } catch (error) {
     console.error('❌ Error saving user to database:', error.message);
     console.error('User data:', { id: user?.id, email: user?.email });
-    // Jangan throw error, biarkan flow berlanjut
+  }
+}
+
+/**
+ * Assign default RBAC permissions
+ */
+async function assignDefaultRBAC(userId, role) {
+  try {
+    console.log(`🔐 Assigning default RBAC for user ${userId} with role ${role}`);
+
+    const modules = await db`SELECT id, code FROM modules WHERE is_active = true`;
+    const divisions = await db`SELECT id, code FROM divisions WHERE is_active = true`;
+
+    for (const mod of modules) {
+      let canView = false, canCreate = false, canUpdate = false, canDelete = false;
+
+      if (role === ROLES.SUPERADMIN) {
+        canView = canCreate = canUpdate = canDelete = true;
+      } else if (role === ROLES.ADMIN) {
+        canView = true;
+        if (mod.code !== 'roles') {
+          canCreate = canUpdate = canDelete = true;
+        }
+      } else {
+        if (['dashboard', 'keuangan', 'properti', 'penjualan', 'persediaan'].includes(mod.code)) {
+          canView = true;
+        }
+      }
+
+      await db`
+        INSERT INTO user_permissions (user_id, module_id, can_view, can_create, can_update, can_delete)
+        VALUES (${userId}, ${mod.id}, ${canView}, ${canCreate}, ${canUpdate}, ${canDelete})
+        ON CONFLICT (user_id, module_id) DO NOTHING
+      `;
+    }
+
+    if (role === ROLES.ADMIN || role === ROLES.SUPERADMIN) {
+      for (const div of divisions) {
+        await db`
+          INSERT INTO user_divisions (user_id, division_id)
+          VALUES (${userId}, ${div.id})
+          ON CONFLICT (user_id, division_id) DO NOTHING
+        `;
+      }
+    }
+
+    console.log(`✅ Default RBAC assigned for user ${userId}`);
+  } catch (error) {
+    console.error('❌ Error assigning default RBAC:', error.message);
   }
 }
 
 /**
  * Reset password
  */
-exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -535,7 +556,7 @@ exports.resetPassword = async (req, res) => {
 /**
  * Resend verification email
  */
-exports.resendVerificationEmail = async (req, res) => {
+export const resendVerificationEmail = async (req, res) => {
   try {
     const { email } = req.body;
 

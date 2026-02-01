@@ -1,34 +1,29 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 /**
  * Get permissions for a specific user
  */
-const getUserPermissions = async (req, res) => {
+export const getUserPermissions = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get user info
-    const userQuery = 'SELECT id, email, username, role FROM users WHERE id = $1';
-    const userResult = await db.query(userQuery, [userId]);
+    const userResult = await db`SELECT id, email, username, role FROM users WHERE id = ${userId}`;
 
-    if (userResult.rows.length === 0) {
+    if (userResult.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
 
-    // Get user divisions
-    const divisionsQuery = `
+    const divisionsResult = await db`
       SELECT d.id, d.name, d.code
       FROM user_divisions ud
       JOIN divisions d ON ud.division_id = d.id
-      WHERE ud.user_id = $1 AND d.is_active = true
+      WHERE ud.user_id = ${userId} AND d.is_active = true
     `;
-    const divisionsResult = await db.query(divisionsQuery, [userId]);
 
-    // Get user permissions
-    const permissionsQuery = `
+    const permissionsResult = await db`
       SELECT 
         m.code,
         m.name,
@@ -38,13 +33,11 @@ const getUserPermissions = async (req, res) => {
         up.can_delete
       FROM user_permissions up
       JOIN modules m ON up.module_id = m.id
-      WHERE up.user_id = $1 AND m.is_active = true
+      WHERE up.user_id = ${userId} AND m.is_active = true
     `;
-    const permissionsResult = await db.query(permissionsQuery, [userId]);
 
-    // Transform permissions to object format
     const permissions = {};
-    permissionsResult.rows.forEach(p => {
+    permissionsResult.forEach(p => {
       permissions[p.code] = {
         name: p.name,
         view: p.can_view,
@@ -57,8 +50,8 @@ const getUserPermissions = async (req, res) => {
     res.json({
       success: true,
       data: {
-        user: userResult.rows[0],
-        divisions: divisionsResult.rows,
+        user: userResult[0],
+        divisions: divisionsResult,
         permissions
       }
     });
@@ -74,28 +67,30 @@ const getUserPermissions = async (req, res) => {
 /**
  * Get current user's permissions (for frontend)
  */
-const getMyPermissions = async (req, res) => {
+export const getMyPermissions = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
+    
+    console.log(`[DEBUG] Getting permissions for user: ${userId} (${userRole})`);
 
-    // Get user divisions
-    const divisionsQuery = `
+    console.log('[DEBUG] Querying user_divisions...');
+    const divisionsResult = await db`
       SELECT d.id, d.name, d.code
       FROM user_divisions ud
       JOIN divisions d ON ud.division_id = d.id
-      WHERE ud.user_id = $1 AND d.is_active = true
+      WHERE ud.user_id = ${userId} AND d.is_active = true
     `;
-    const divisionsResult = await db.query(divisionsQuery, [userId]);
+    console.log(`[DEBUG] Found ${divisionsResult.length} divisions`);
 
-    // Get all active modules
-    const modulesQuery = 'SELECT id, code, name, icon, route, sort_order FROM modules WHERE is_active = true ORDER BY sort_order ASC';
-    const modulesResult = await db.query(modulesQuery);
+    console.log('[DEBUG] Querying modules...');
+    const modulesResult = await db`SELECT id, code, name, icon, route, sort_order FROM modules WHERE is_active = true ORDER BY sort_order ASC`;
+    console.log(`[DEBUG] Found ${modulesResult.length} modules`);
 
-    // For superadmin, grant all permissions
     if (userRole === 'superadmin') {
+      console.log('[DEBUG] User is superadmin, granting all permissions');
       const permissions = {};
-      modulesResult.rows.forEach(m => {
+      modulesResult.forEach(m => {
         permissions[m.code] = {
           name: m.name,
           icon: m.icon,
@@ -111,17 +106,15 @@ const getMyPermissions = async (req, res) => {
         success: true,
         data: {
           user: req.user,
-          divisions: divisionsResult.rows,
+          divisions: divisionsResult,
           permissions,
-          modules: modulesResult.rows
+          modules: modulesResult
         }
       });
     }
 
-    // For admin, grant permissions based on their divisions + user permissions
-    // For regular users, only use user_permissions table
-
-    const permissionsQuery = `
+    console.log('[DEBUG] Querying user_permissions...');
+    const permissionsResult = await db`
       SELECT 
         m.code,
         m.name,
@@ -132,14 +125,14 @@ const getMyPermissions = async (req, res) => {
         COALESCE(up.can_update, false) as can_update,
         COALESCE(up.can_delete, false) as can_delete
       FROM modules m
-      LEFT JOIN user_permissions up ON m.id = up.module_id AND up.user_id = $1
+      LEFT JOIN user_permissions up ON m.id = up.module_id AND up.user_id = ${userId}
       WHERE m.is_active = true
       ORDER BY m.sort_order ASC
     `;
-    const permissionsResult = await db.query(permissionsQuery, [userId]);
+    console.log(`[DEBUG] Found ${permissionsResult.length} permission entries`);
 
     const permissions = {};
-    permissionsResult.rows.forEach(p => {
+    permissionsResult.forEach(p => {
       permissions[p.code] = {
         name: p.name,
         icon: p.icon,
@@ -151,20 +144,22 @@ const getMyPermissions = async (req, res) => {
       };
     });
 
+    console.log('[DEBUG] Sending successful response');
     res.json({
       success: true,
       data: {
         user: req.user,
-        divisions: divisionsResult.rows,
+        divisions: divisionsResult,
         permissions,
-        modules: modulesResult.rows
+        modules: modulesResult
       }
     });
   } catch (error) {
-    console.error('Error getting my permissions:', error);
+    console.error('[ERROR] Error getting my permissions:', error);
+    console.error('[ERROR] Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch permissions'
+      error: 'Failed to fetch permissions: ' + error.message
     });
   }
 };
@@ -172,7 +167,7 @@ const getMyPermissions = async (req, res) => {
 /**
  * Set permissions for a user (admin/superadmin)
  */
-const setUserPermissions = async (req, res) => {
+export const setUserPermissions = async (req, res) => {
   try {
     const { userId } = req.params;
     const { permissions } = req.body;
@@ -184,70 +179,54 @@ const setUserPermissions = async (req, res) => {
       });
     }
 
-    // Check if user exists
-    const userQuery = 'SELECT id, role FROM users WHERE id = $1';
-    const userResult = await db.query(userQuery, [userId]);
+    const userResult = await db`SELECT id, role FROM users WHERE id = ${userId}`;
 
-    if (userResult.rows.length === 0) {
+    if (userResult.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
 
-    // Cannot set permissions for superadmin
-    if (userResult.rows[0].role === 'superadmin') {
+    if (userResult[0].role === 'superadmin') {
       return res.status(400).json({
         success: false,
         error: 'Cannot modify permissions for superadmin'
       });
     }
 
-    // Check if requester is admin and target is also admin (only superadmin can modify admin)
-    if (req.user.role === 'admin' && userResult.rows[0].role === 'admin') {
+    if (req.user.role === 'admin' && userResult[0].role === 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Admin cannot modify permissions for another admin'
       });
     }
 
-    // Get all modules
-    const modulesQuery = 'SELECT id, code FROM modules WHERE is_active = true';
-    const modulesResult = await db.query(modulesQuery);
+    const modulesResult = await db`SELECT id, code FROM modules WHERE is_active = true`;
     const moduleMap = {};
-    modulesResult.rows.forEach(m => {
+    modulesResult.forEach(m => {
       moduleMap[m.code] = m.id;
     });
 
-    // Upsert permissions for each module
     const results = [];
     for (const [moduleCode, perms] of Object.entries(permissions)) {
       const moduleId = moduleMap[moduleCode];
       if (!moduleId) continue;
 
-      const upsertQuery = `
+      const result = await db`
         INSERT INTO user_permissions (user_id, module_id, can_view, can_create, can_update, can_delete, granted_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES (${userId}, ${moduleId}, ${perms.view ?? false}, ${perms.create ?? false}, ${perms.update ?? false}, ${perms.delete ?? false}, ${req.user.id})
         ON CONFLICT (user_id, module_id) 
         DO UPDATE SET 
-          can_view = $3,
-          can_create = $4,
-          can_update = $5,
-          can_delete = $6,
-          granted_by = $7,
+          can_view = ${perms.view ?? false},
+          can_create = ${perms.create ?? false},
+          can_update = ${perms.update ?? false},
+          can_delete = ${perms.delete ?? false},
+          granted_by = ${req.user.id},
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `;
-      const result = await db.query(upsertQuery, [
-        userId,
-        moduleId,
-        perms.view ?? false,
-        perms.create ?? false,
-        perms.update ?? false,
-        perms.delete ?? false,
-        req.user.id
-      ]);
-      results.push(result.rows[0]);
+      results.push(result[0]);
     }
 
     res.json({
@@ -267,7 +246,7 @@ const setUserPermissions = async (req, res) => {
 /**
  * Bulk set permissions for multiple users
  */
-const bulkSetPermissions = async (req, res) => {
+export const bulkSetPermissions = async (req, res) => {
   try {
     const { user_ids, permissions } = req.body;
 
@@ -285,51 +264,37 @@ const bulkSetPermissions = async (req, res) => {
       });
     }
 
-    // Get all modules
-    const modulesQuery = 'SELECT id, code FROM modules WHERE is_active = true';
-    const modulesResult = await db.query(modulesQuery);
+    const modulesResult = await db`SELECT id, code FROM modules WHERE is_active = true`;
     const moduleMap = {};
-    modulesResult.rows.forEach(m => {
+    modulesResult.forEach(m => {
       moduleMap[m.code] = m.id;
     });
 
     let totalUpdated = 0;
 
     for (const userId of user_ids) {
-      // Check if user exists and is not superadmin
-      const userQuery = 'SELECT id, role FROM users WHERE id = $1';
-      const userResult = await db.query(userQuery, [userId]);
+      const userResult = await db`SELECT id, role FROM users WHERE id = ${userId}`;
 
-      if (userResult.rows.length === 0 || userResult.rows[0].role === 'superadmin') {
+      if (userResult.length === 0 || userResult[0].role === 'superadmin') {
         continue;
       }
 
-      // Upsert permissions for each module
       for (const [moduleCode, perms] of Object.entries(permissions)) {
         const moduleId = moduleMap[moduleCode];
         if (!moduleId) continue;
 
-        const upsertQuery = `
+        await db`
           INSERT INTO user_permissions (user_id, module_id, can_view, can_create, can_update, can_delete, granted_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          VALUES (${userId}, ${moduleId}, ${perms.view ?? false}, ${perms.create ?? false}, ${perms.update ?? false}, ${perms.delete ?? false}, ${req.user.id})
           ON CONFLICT (user_id, module_id) 
           DO UPDATE SET 
-            can_view = $3,
-            can_create = $4,
-            can_update = $5,
-            can_delete = $6,
-            granted_by = $7,
+            can_view = ${perms.view ?? false},
+            can_create = ${perms.create ?? false},
+            can_update = ${perms.update ?? false},
+            can_delete = ${perms.delete ?? false},
+            granted_by = ${req.user.id},
             updated_at = CURRENT_TIMESTAMP
         `;
-        await db.query(upsertQuery, [
-          userId,
-          moduleId,
-          perms.view ?? false,
-          perms.create ?? false,
-          perms.update ?? false,
-          perms.delete ?? false,
-          req.user.id
-        ]);
       }
       totalUpdated++;
     }
@@ -345,11 +310,4 @@ const bulkSetPermissions = async (req, res) => {
       error: 'Failed to set permissions'
     });
   }
-};
-
-module.exports = {
-  getUserPermissions,
-  getMyPermissions,
-  setUserPermissions,
-  bulkSetPermissions
 };

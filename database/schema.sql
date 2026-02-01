@@ -3,13 +3,16 @@
 -- Create database if not exists
 -- CREATE DATABASE perumahan_db;
 
--- Users table for authentication (sync with Supabase Auth)
+-- Users table for authentication (sync with Supabase Auth via trigger)
+-- NOTE: Tidak menggunakan FK ke auth.users karena tidak bisa diakses dari public schema
+-- User akan di-sync otomatis via trigger di migration_fix_rbac.sql
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    id UUID PRIMARY KEY,  -- NO FK to auth.users (sync via trigger)
+    username VARCHAR(100),
+    email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255), -- Nullable karena user OAuth tidak punya password
-    role VARCHAR(20) DEFAULT 'user',
+    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

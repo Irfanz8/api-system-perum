@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import * as keuanganController from '../controllers/keuanganController.js';
+import { authenticateUser } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permissions.js';
+
 const router = express.Router();
-const keuanganController = require('../controllers/keuanganController');
-const { authenticateUser } = require('../middleware/auth');
-const { checkPermission } = require('../middleware/permissions');
 
 /**
  * @swagger
@@ -192,4 +193,4 @@ router.put('/:id', authenticateUser, checkPermission('KEUNGAN_UPDATE'), keuangan
  */
 router.delete('/:id', authenticateUser, checkPermission('KEUNGAN_DELETE'), keuanganController.deleteTransaction);
 
-module.exports = router;
+export default router;

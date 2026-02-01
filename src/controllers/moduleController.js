@@ -1,19 +1,18 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 /**
  * Get all modules
  */
-const getAllModules = async (req, res) => {
+export const getAllModules = async (req, res) => {
   try {
-    const query = `
+    const result = await db`
       SELECT * FROM modules
       ORDER BY sort_order ASC, name ASC
     `;
-    const result = await db.query(query);
 
     res.json({
       success: true,
-      data: result.rows
+      data: result
     });
   } catch (error) {
     console.error('Error getting modules:', error);
@@ -27,14 +26,13 @@ const getAllModules = async (req, res) => {
 /**
  * Get module by ID
  */
-const getModuleById = async (req, res) => {
+export const getModuleById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = 'SELECT * FROM modules WHERE id = $1';
-    const result = await db.query(query, [id]);
+    const result = await db`SELECT * FROM modules WHERE id = ${id}`;
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Module not found'
@@ -43,7 +41,7 @@ const getModuleById = async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error getting module:', error);
@@ -57,7 +55,7 @@ const getModuleById = async (req, res) => {
 /**
  * Create new module (superadmin only)
  */
-const createModule = async (req, res) => {
+export const createModule = async (req, res) => {
   try {
     const { name, code, description, icon, route, sort_order } = req.body;
 
@@ -68,17 +66,16 @@ const createModule = async (req, res) => {
       });
     }
 
-    const query = `
+    const result = await db`
       INSERT INTO modules (name, code, description, icon, route, sort_order)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES (${name}, ${code.toLowerCase()}, ${description}, ${icon}, ${route}, ${sort_order || 0})
       RETURNING *
     `;
-    const result = await db.query(query, [name, code.toLowerCase(), description, icon, route, sort_order || 0]);
 
     res.status(201).json({
       success: true,
       message: 'Module created successfully',
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error creating module:', error);
@@ -98,26 +95,25 @@ const createModule = async (req, res) => {
 /**
  * Update module (superadmin only)
  */
-const updateModule = async (req, res) => {
+export const updateModule = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, code, description, icon, route, is_active, sort_order } = req.body;
 
-    const query = `
+    const result = await db`
       UPDATE modules
-      SET name = COALESCE($1, name),
-          code = COALESCE($2, code),
-          description = COALESCE($3, description),
-          icon = COALESCE($4, icon),
-          route = COALESCE($5, route),
-          is_active = COALESCE($6, is_active),
-          sort_order = COALESCE($7, sort_order)
-      WHERE id = $8
+      SET name = COALESCE(${name}, name),
+          code = COALESCE(${code?.toLowerCase() || null}, code),
+          description = COALESCE(${description}, description),
+          icon = COALESCE(${icon}, icon),
+          route = COALESCE(${route}, route),
+          is_active = COALESCE(${is_active}, is_active),
+          sort_order = COALESCE(${sort_order}, sort_order)
+      WHERE id = ${id}
       RETURNING *
     `;
-    const result = await db.query(query, [name, code?.toLowerCase(), description, icon, route, is_active, sort_order, id]);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Module not found'
@@ -127,7 +123,7 @@ const updateModule = async (req, res) => {
     res.json({
       success: true,
       message: 'Module updated successfully',
-      data: result.rows[0]
+      data: result[0]
     });
   } catch (error) {
     console.error('Error updating module:', error);
@@ -147,14 +143,13 @@ const updateModule = async (req, res) => {
 /**
  * Delete module (superadmin only)
  */
-const deleteModule = async (req, res) => {
+export const deleteModule = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = 'DELETE FROM modules WHERE id = $1 RETURNING *';
-    const result = await db.query(query, [id]);
+    const result = await db`DELETE FROM modules WHERE id = ${id} RETURNING *`;
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Module not found'
@@ -172,12 +167,4 @@ const deleteModule = async (req, res) => {
       error: 'Failed to delete module'
     });
   }
-};
-
-module.exports = {
-  getAllModules,
-  getModuleById,
-  createModule,
-  updateModule,
-  deleteModule
 };

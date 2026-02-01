@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as authController from '../controllers/authController.js';
+import { authenticateUser } from '../middleware/auth.js';
+
 const router = express.Router();
-const authController = require('../controllers/authController');
-const { authenticateUser } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -286,4 +287,4 @@ router.get('/profile', authenticateUser, authController.getProfile);
  */
 router.put('/profile', authenticateUser, authController.updateProfile);
 
-module.exports = router;
+export default router;

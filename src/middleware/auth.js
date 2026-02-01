@@ -1,10 +1,11 @@
-const supabase = require('../config/supabase');
-const { ROLES } = require('../utils/roles');
+import { supabaseAdmin } from '../config/supabase.js';
+import { ROLES } from '../utils/roles.js';
+import db from '../config/database.js';
 
 /**
  * Middleware untuk memverifikasi JWT token dari Supabase
  */
-const authenticateUser = async (req, res, next) => {
+export const authenticateUser = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -16,29 +17,35 @@ const authenticateUser = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
+    
+    // Verifikasi token dengan Supabase using admin client
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
-    // Verifikasi token dengan Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
+    if (error) {
+      console.error('Supabase auth error:', error.message);
       return res.status(401).json({
         success: false,
-        error: 'Invalid or expired token'
+        error: 'Invalid or expired token: ' + error.message
+      });
+    }
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found'
       });
     }
 
     // Get user role from database (lebih reliable)
-    const db = require('../config/database');
     let userRole = user.user_metadata?.role || ROLES.USER;
     
     try {
-      const roleQuery = 'SELECT role FROM users WHERE id = $1';
-      const roleResult = await db.query(roleQuery, [user.id]);
-      if (roleResult.rows.length > 0 && roleResult.rows[0].role) {
-        userRole = roleResult.rows[0].role;
+      const roleResult = await db`SELECT role FROM users WHERE id = ${user.id}`;
+      if (roleResult.length > 0 && roleResult[0].role) {
+        userRole = roleResult[0].role;
       }
-    } catch (error) {
-      console.error('Error fetching user role from database:', error);
+    } catch (dbError) {
+      console.error('Error fetching user role from database:', dbError);
       // Fallback ke user_metadata jika database error
     }
 
@@ -49,13 +56,15 @@ const authenticateUser = async (req, res, next) => {
       role: userRole,
       name: user.user_metadata?.name || user.email
     };
+    
+    console.log(`Auth middleware success: ${req.user.email} (${req.user.role})`);
 
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
     res.status(500).json({
       success: false,
-      error: 'Authentication failed'
+      error: 'Authentication failed: ' + error.message
     });
   }
 };
@@ -63,7 +72,7 @@ const authenticateUser = async (req, res, next) => {
 /**
  * Middleware untuk memeriksa role user
  */
-const authorizeRoles = (...roles) => {
+export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -86,19 +95,19 @@ const authorizeRoles = (...roles) => {
 /**
  * Middleware untuk memeriksa apakah user adalah admin (admin atau superadmin)
  */
-const isAdmin = authorizeRoles(ROLES.ADMIN, ROLES.SUPERADMIN);
+export const isAdmin = authorizeRoles(ROLES.ADMIN, ROLES.SUPERADMIN);
 
 /**
  * Middleware untuk memeriksa apakah user adalah superadmin
  */
-const isSuperAdmin = authorizeRoles(ROLES.SUPERADMIN);
+export const isSuperAdmin = authorizeRoles(ROLES.SUPERADMIN);
 
 /**
  * Middleware untuk memeriksa permission spesifik pada module
  * @param {string} moduleCode - Kode module (e.g., 'keuangan', 'properti')
  * @param {string} action - Action yang diperlukan ('view', 'create', 'update', 'delete')
  */
-const hasPermission = (moduleCode, action) => {
+export const hasPermission = (moduleCode, action) => {
   return async (req, res, next) => {
     try {
       if (!req.user) {
@@ -113,8 +122,6 @@ const hasPermission = (moduleCode, action) => {
         return next();
       }
 
-      const db = require('../config/database');
-      
       // Map action to column name
       const actionColumnMap = {
         'view': 'can_view',
@@ -131,16 +138,15 @@ const hasPermission = (moduleCode, action) => {
         });
       }
 
-      // Check permission from database
-      const query = `
-        SELECT up.${actionColumn} as has_permission
+      // Check permission from database using tagged template
+      const result = await db`
+        SELECT ${db.unsafe(actionColumn)} as has_permission
         FROM user_permissions up
         JOIN modules m ON up.module_id = m.id
-        WHERE up.user_id = $1 AND m.code = $2 AND m.is_active = true
+        WHERE up.user_id = ${req.user.id} AND m.code = ${moduleCode} AND m.is_active = true
       `;
-      const result = await db.query(query, [req.user.id, moduleCode]);
 
-      if (result.rows.length === 0 || !result.rows[0].has_permission) {
+      if (result.length === 0 || !result[0].has_permission) {
         return res.status(403).json({
           success: false,
           error: `You do not have ${action} permission for ${moduleCode}`
@@ -162,7 +168,7 @@ const hasPermission = (moduleCode, action) => {
  * Middleware untuk memeriksa apakah user belong to division tertentu
  * @param {string} divisionIdParam - Nama parameter yang berisi division_id (default: 'divisionId')
  */
-const belongsToDivision = (divisionIdParam = 'divisionId') => {
+export const belongsToDivision = (divisionIdParam = 'divisionId') => {
   return async (req, res, next) => {
     try {
       if (!req.user) {
@@ -185,14 +191,12 @@ const belongsToDivision = (divisionIdParam = 'divisionId') => {
         });
       }
 
-      const db = require('../config/database');
-      const query = `
+      const result = await db`
         SELECT 1 FROM user_divisions
-        WHERE user_id = $1 AND division_id = $2
+        WHERE user_id = ${req.user.id} AND division_id = ${divisionId}
       `;
-      const result = await db.query(query, [req.user.id, divisionId]);
 
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return res.status(403).json({
           success: false,
           error: 'You do not have access to this division'
@@ -208,13 +212,4 @@ const belongsToDivision = (divisionIdParam = 'divisionId') => {
       });
     }
   };
-};
-
-module.exports = {
-  authenticateUser,
-  authorizeRoles,
-  isAdmin,
-  isSuperAdmin,
-  hasPermission,
-  belongsToDivision
 };

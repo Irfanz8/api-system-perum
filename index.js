@@ -1,11 +1,23 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./src/utils/swagger');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './src/utils/swagger.js';
+import 'dotenv/config';
+
+// Import routes
+import authRoutes from './src/routes/auth.js';
+import userRoutes from './src/routes/users.js';
+import roleRoutes from './src/routes/roles.js';
+import keuanganRoutes from './src/routes/keuangan.js';
+import propertiRoutes from './src/routes/properti.js';
+import persediaanRoutes from './src/routes/persediaan.js';
+import penjualanRoutes from './src/routes/penjualan.js';
+import divisionRoutes from './src/routes/divisions.js';
+import moduleRoutes from './src/routes/modules.js';
+import permissionRoutes from './src/routes/permissions.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,18 +74,6 @@ app.get('/', (req, res) => {
       }
   });
 });
-
-// Import routes
-const authRoutes = require('./src/routes/auth');
-const userRoutes = require('./src/routes/users');
-const roleRoutes = require('./src/routes/roles');
-const keuanganRoutes = require('./src/routes/keuangan');
-const propertiRoutes = require('./src/routes/properti');
-const persediaanRoutes = require('./src/routes/persediaan');
-const penjualanRoutes = require('./src/routes/penjualan');
-const divisionRoutes = require('./src/routes/divisions');
-const moduleRoutes = require('./src/routes/modules');
-const permissionRoutes = require('./src/routes/permissions');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -143,4 +143,4 @@ app.listen(PORT, () => {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-module.exports = app;
+export default app;

@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as permissionController from '../controllers/permissionController.js';
+import { authenticateUser, isAdmin } from '../middleware/auth.js';
+
 const router = express.Router();
-const permissionController = require('../controllers/permissionController');
-const { authenticateUser, isAdmin, isSuperAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -161,4 +162,4 @@ router.put('/user/:userId', authenticateUser, isAdmin, permissionController.setU
  */
 router.post('/bulk', authenticateUser, isAdmin, permissionController.bulkSetPermissions);
 
-module.exports = router;
+export default router;

@@ -1,9 +1,9 @@
-const { ROLES } = require('../utils/roles');
+import { ROLES } from '../utils/roles.js';
 
 /**
  * Permission matrix untuk setiap role
  */
-const PERMISSIONS = {
+export const PERMISSIONS = {
   // Users Management
   USERS_READ: [ROLES.SUPERADMIN],
   USERS_CREATE: [ROLES.SUPERADMIN],
@@ -43,7 +43,7 @@ const PERMISSIONS = {
  * Middleware untuk memeriksa permission
  * @param {string} permission - Permission yang diperlukan
  */
-const checkPermission = (permission) => {
+export const checkPermission = (permission) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -81,7 +81,7 @@ const checkPermission = (permission) => {
  * Middleware untuk memeriksa apakah user bisa mengakses resource miliknya sendiri
  * Digunakan untuk user biasa yang hanya bisa akses data yang mereka buat
  */
-const checkOwnership = (resourceUserIdField = 'created_by') => {
+export const checkOwnership = (resourceUserIdField = 'created_by') => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -106,7 +106,7 @@ const checkOwnership = (resourceUserIdField = 'created_by') => {
 /**
  * Helper function untuk mendapatkan semua permissions yang dimiliki role
  */
-const getRolePermissions = (role) => {
+export const getRolePermissions = (role) => {
   const permissions = [];
   for (const [permission, allowedRoles] of Object.entries(PERMISSIONS)) {
     if (allowedRoles.includes(role)) {
@@ -114,11 +114,4 @@ const getRolePermissions = (role) => {
     }
   }
   return permissions;
-};
-
-module.exports = {
-  PERMISSIONS,
-  checkPermission,
-  checkOwnership,
-  getRolePermissions
 };

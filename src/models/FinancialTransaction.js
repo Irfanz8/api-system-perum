@@ -1,126 +1,104 @@
-const db = require('../config/database');
+import db from '../config/database.js';
 
 class FinancialTransaction {
   static async getAll(filters = {}) {
-    let query = `
+    const conditions = [];
+    const values = [];
+    
+    if (filters.type) {
+      conditions.push(db`ft.type = ${filters.type}`);
+    }
+    if (filters.category) {
+      conditions.push(db`ft.category = ${filters.category}`);
+    }
+    if (filters.start_date) {
+      conditions.push(db`ft.transaction_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`ft.transaction_date <= ${filters.end_date}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    const result = await db`
       SELECT ft.*, p.name as property_name, u.username as created_by_name
       FROM financial_transactions ft
       LEFT JOIN properties p ON ft.property_id = p.id
       LEFT JOIN users u ON ft.created_by = u.id
-      WHERE 1=1
+      ${whereClause}
+      ORDER BY ft.transaction_date DESC, ft.created_at DESC
+      ${filters.limit ? db`LIMIT ${filters.limit}` : db``}
     `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (filters.type) {
-      query += ` AND ft.type = $${paramIndex}`;
-      params.push(filters.type);
-      paramIndex++;
-    }
-
-    if (filters.category) {
-      query += ` AND ft.category = $${paramIndex}`;
-      params.push(filters.category);
-      paramIndex++;
-    }
-
-    if (filters.start_date) {
-      query += ` AND ft.transaction_date >= $${paramIndex}`;
-      params.push(filters.start_date);
-      paramIndex++;
-    }
-
-    if (filters.end_date) {
-      query += ` AND ft.transaction_date <= $${paramIndex}`;
-      params.push(filters.end_date);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY ft.transaction_date DESC, ft.created_at DESC`;
-
-    if (filters.limit) {
-      query += ` LIMIT $${paramIndex}`;
-      params.push(filters.limit);
-      paramIndex++;
-    }
-
-    const result = await db.query(query, params);
-    return result.rows;
+    return result;
   }
 
   static async getById(id) {
-    const query = `
+    const result = await db`
       SELECT ft.*, p.name as property_name, u.username as created_by_name
       FROM financial_transactions ft
       LEFT JOIN properties p ON ft.property_id = p.id
       LEFT JOIN users u ON ft.created_by = u.id
-      WHERE ft.id = $1
+      WHERE ft.id = ${id}
     `;
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    return result[0];
   }
 
   static async create(transactionData) {
     const { type, category, amount, description, transaction_date, property_id, created_by } = transactionData;
-    const query = `
+    const result = await db`
       INSERT INTO financial_transactions (type, category, amount, description, transaction_date, property_id, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES (${type}, ${category}, ${amount}, ${description}, ${transaction_date}, ${property_id}, ${created_by})
       RETURNING *
     `;
-    const values = [type, category, amount, description, transaction_date, property_id, created_by];
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async update(id, transactionData) {
     const { type, category, amount, description, transaction_date, property_id } = transactionData;
-    const query = `
+    const result = await db`
       UPDATE financial_transactions
-      SET type = $1, category = $2, amount = $3, description = $4, transaction_date = $5, property_id = $6
-      WHERE id = $7
+      SET type = ${type}, category = ${category}, amount = ${amount}, 
+          description = ${description}, transaction_date = ${transaction_date}, property_id = ${property_id}
+      WHERE id = ${id}
       RETURNING *
     `;
-    const values = [type, category, amount, description, transaction_date, property_id, id];
-    const result = await db.query(query, values);
-    return result.rows[0];
+    return result[0];
   }
 
   static async delete(id) {
-    const query = 'DELETE FROM financial_transactions WHERE id = $1 RETURNING *';
-    const result = await db.query(query, [id]);
-    return result.rows[0];
+    const result = await db`DELETE FROM financial_transactions WHERE id = ${id} RETURNING *`;
+    return result[0];
   }
 
   static async getSummary(filters = {}) {
-    let query = `
+    const conditions = [];
+    
+    if (filters.start_date) {
+      conditions.push(db`transaction_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`transaction_date <= ${filters.end_date}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    const result = await db`
       SELECT 
         type,
         category,
         SUM(amount) as total_amount,
         COUNT(*) as transaction_count
       FROM financial_transactions
-      WHERE 1=1
+      ${whereClause}
+      GROUP BY type, category 
+      ORDER BY type, category
     `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (filters.start_date) {
-      query += ` AND transaction_date >= $${paramIndex}`;
-      params.push(filters.start_date);
-      paramIndex++;
-    }
-
-    if (filters.end_date) {
-      query += ` AND transaction_date <= $${paramIndex}`;
-      params.push(filters.end_date);
-      paramIndex++;
-    }
-
-    query += ` GROUP BY type, category ORDER BY type, category`;
-
-    const result = await db.query(query, params);
-    return result.rows;
+    return result;
   }
 }
 
-module.exports = FinancialTransaction;
+export default FinancialTransaction;

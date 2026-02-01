@@ -1,7 +1,7 @@
-const Property = require('../models/Property');
+import Property from '../models/Property.js';
 
 // Get all properties
-exports.getAllProperties = async (req, res) => {
+export const getAllProperties = async (req, res) => {
   try {
     const filters = {
       type: req.query.type,
@@ -26,7 +26,7 @@ exports.getAllProperties = async (req, res) => {
 };
 
 // Get property by ID
-exports.getPropertyById = async (req, res) => {
+export const getPropertyById = async (req, res) => {
   try {
     const { id } = req.params;
     const property = await Property.getById(id);
@@ -51,7 +51,7 @@ exports.getPropertyById = async (req, res) => {
 };
 
 // Create new property
-exports.createProperty = async (req, res) => {
+export const createProperty = async (req, res) => {
   try {
     const { 
       name, 
@@ -66,7 +66,6 @@ exports.createProperty = async (req, res) => {
       jumlah_kamar_mandi 
     } = req.body;
 
-    // Validation
     if (!name || !type || !address || !price) {
       return res.status(400).json({
         success: false,
@@ -110,7 +109,7 @@ exports.createProperty = async (req, res) => {
 };
 
 // Update property
-exports.updateProperty = async (req, res) => {
+export const updateProperty = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -126,7 +125,6 @@ exports.updateProperty = async (req, res) => {
       jumlah_kamar_mandi 
     } = req.body;
 
-    // Validation
     if (price && price <= 0) {
       return res.status(400).json({
         success: false,
@@ -170,7 +168,7 @@ exports.updateProperty = async (req, res) => {
 };
 
 // Delete property
-exports.deleteProperty = async (req, res) => {
+export const deleteProperty = async (req, res) => {
   try {
     const { id } = req.params;
     const property = await Property.delete(id);
@@ -196,7 +194,7 @@ exports.deleteProperty = async (req, res) => {
 };
 
 // Update property status
-exports.updatePropertyStatus = async (req, res) => {
+export const updatePropertyStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -239,7 +237,7 @@ exports.updatePropertyStatus = async (req, res) => {
 };
 
 // Get property sales history
-exports.getPropertySalesHistory = async (req, res) => {
+export const getPropertySalesHistory = async (req, res) => {
   try {
     const { id } = req.params;
     const salesHistory = await Property.getSalesHistory(id);
@@ -258,7 +256,7 @@ exports.getPropertySalesHistory = async (req, res) => {
 };
 
 // Get available properties
-exports.getAvailableProperties = async (req, res) => {
+export const getAvailableProperties = async (req, res) => {
   try {
     const properties = await Property.getAvailableProperties();
     
@@ -276,7 +274,7 @@ exports.getAvailableProperties = async (req, res) => {
 };
 
 // Get property statistics
-exports.getPropertyStats = async (req, res) => {
+export const getPropertyStats = async (req, res) => {
   try {
     const stats = await Property.getPropertyStats();
     

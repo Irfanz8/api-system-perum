@@ -1,7 +1,7 @@
-const Inventory = require('../models/Inventory');
+import Inventory from '../models/Inventory.js';
 
 // Get all inventory items
-exports.getAllInventory = async (req, res) => {
+export const getAllInventory = async (req, res) => {
   try {
     const filters = {
       category: req.query.category,
@@ -25,7 +25,7 @@ exports.getAllInventory = async (req, res) => {
 };
 
 // Get inventory item by ID
-exports.getInventoryById = async (req, res) => {
+export const getInventoryById = async (req, res) => {
   try {
     const { id } = req.params;
     const inventory = await Inventory.getById(id);
@@ -50,7 +50,7 @@ exports.getInventoryById = async (req, res) => {
 };
 
 // Create new inventory item
-exports.createInventory = async (req, res) => {
+export const createInventory = async (req, res) => {
   try {
     const { 
       name, 
@@ -63,7 +63,6 @@ exports.createInventory = async (req, res) => {
       description 
     } = req.body;
 
-    // Validation
     if (!name || !category || !quantity || !unit) {
       return res.status(400).json({
         success: false,
@@ -105,7 +104,7 @@ exports.createInventory = async (req, res) => {
 };
 
 // Update inventory item
-exports.updateInventory = async (req, res) => {
+export const updateInventory = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -119,7 +118,6 @@ exports.updateInventory = async (req, res) => {
       description 
     } = req.body;
 
-    // Validation
     if (quantity !== undefined && quantity < 0) {
       return res.status(400).json({
         success: false,
@@ -161,7 +159,7 @@ exports.updateInventory = async (req, res) => {
 };
 
 // Delete inventory item
-exports.deleteInventory = async (req, res) => {
+export const deleteInventory = async (req, res) => {
   try {
     const { id } = req.params;
     const inventory = await Inventory.delete(id);
@@ -187,7 +185,7 @@ exports.deleteInventory = async (req, res) => {
 };
 
 // Update inventory quantity
-exports.updateInventoryQuantity = async (req, res) => {
+export const updateInventoryQuantity = async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
@@ -229,7 +227,7 @@ exports.updateInventoryQuantity = async (req, res) => {
 };
 
 // Get inventory transaction history
-exports.getInventoryTransactionHistory = async (req, res) => {
+export const getInventoryTransactionHistory = async (req, res) => {
   try {
     const { id } = req.params;
     const history = await Inventory.getTransactionHistory(id);
@@ -248,12 +246,11 @@ exports.getInventoryTransactionHistory = async (req, res) => {
 };
 
 // Add inventory transaction (in/out)
-exports.addInventoryTransaction = async (req, res) => {
+export const addInventoryTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const { type, quantity, description, transaction_date } = req.body;
 
-    // Validation
     if (!type || !quantity) {
       return res.status(400).json({
         success: false,
@@ -300,7 +297,7 @@ exports.addInventoryTransaction = async (req, res) => {
 };
 
 // Get low stock items
-exports.getLowStockItems = async (req, res) => {
+export const getLowStockItems = async (req, res) => {
   try {
     const items = await Inventory.getLowStockItems();
     
@@ -318,7 +315,7 @@ exports.getLowStockItems = async (req, res) => {
 };
 
 // Get inventory statistics
-exports.getInventoryStats = async (req, res) => {
+export const getInventoryStats = async (req, res) => {
   try {
     const stats = await Inventory.getInventoryStats();
     

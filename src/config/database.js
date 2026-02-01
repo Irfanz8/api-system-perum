@@ -1,25 +1,6 @@
-const { Pool } = require('pg');
+import postgres from 'postgres'
 
-// Database configuration untuk Supabase PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const connectionString = process.env.DATABASE_URL
+const sql = postgres(connectionString)
 
-// Test database connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database (Supabase)');
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
-
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool
-};
+export default sql
