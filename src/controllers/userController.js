@@ -102,13 +102,15 @@ export const updateUserRole = async (req, res) => {
     const userResult = await db`SELECT id, email, role FROM users WHERE id = ${id}`;
 
     if (userResult.length === 0) {
+      console.log('ERROR: User tidak ditemukan di database');
       return res.status(404).json({
         success: false,
-        error: 'User tidak ditemukan'
+        error: 'User tidak ditemukan di database. Pastikan user ID sudah terdaftar.'
       });
     }
 
     const targetUser = userResult[0];
+    console.log('Target user found in database:', targetUser.email, targetUser.role);
 
     const roleLevels = {
       [ROLES.SUPERADMIN]: 3,
@@ -124,12 +126,21 @@ export const updateUserRole = async (req, res) => {
     }
     
     console.log('Updating Supabase user metadata...');
-    const { data: { user }, error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(id, {
+    const { data, error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(id, {
       user_metadata: { role }
     });
     
     if (supabaseError) {
       console.log('ERROR: Supabase update failed:', supabaseError);
+      
+      // Check if it's a "user not found" error from Supabase
+      if (supabaseError.message && supabaseError.message.toLowerCase().includes('not found')) {
+        return res.status(404).json({
+          success: false,
+          error: `User ditemukan di database tapi tidak di Supabase Auth. User mungkin belum login atau data tidak sinkron. User: ${targetUser.email}`
+        });
+      }
+      
       return res.status(400).json({
         success: false,
         error: supabaseError.message
