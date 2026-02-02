@@ -1,4 +1,4 @@
-import supabase from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabase.js';
 import db from '../config/database.js';
 import { ROLES, isValidRole } from '../utils/roles.js';
 
@@ -61,7 +61,15 @@ export const updateUserRole = async (req, res) => {
     const { role } = req.body;
     const currentUser = req.user;
     
+    // Log untuk debugging
+    console.log('=== Update User Role Request ===');
+    console.log('Target User ID:', id);
+    console.log('Request Body:', req.body);
+    console.log('Requested Role:', role);
+    console.log('Current User:', currentUser?.email, currentUser?.role);
+    
     if (!role) {
+      console.log('ERROR: Role tidak ada di request body');
       return res.status(400).json({
         success: false,
         error: 'Role wajib diisi'
@@ -69,6 +77,8 @@ export const updateUserRole = async (req, res) => {
     }
     
     if (!isValidRole(role)) {
+      console.log('ERROR: Role tidak valid:', role);
+      console.log('Valid roles:', Object.values(ROLES));
       return res.status(400).json({
         success: false,
         error: `Role tidak valid. Role yang tersedia: ${Object.values(ROLES).join(', ')}`
@@ -113,16 +123,19 @@ export const updateUserRole = async (req, res) => {
       });
     }
     
-    const { data: { user }, error: supabaseError } = await supabase.auth.admin.updateUserById(id, {
+    console.log('Updating Supabase user metadata...');
+    const { data: { user }, error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(id, {
       user_metadata: { role }
     });
     
     if (supabaseError) {
+      console.log('ERROR: Supabase update failed:', supabaseError);
       return res.status(400).json({
         success: false,
         error: supabaseError.message
       });
     }
+    console.log('Supabase user metadata updated successfully');
     
     const result = await db`UPDATE users SET role = ${role}, updated_at = CURRENT_TIMESTAMP WHERE id = ${id} RETURNING *`;
     
@@ -158,7 +171,7 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { error: supabaseError } = await supabase.auth.admin.deleteUser(id);
+    const { error: supabaseError } = await supabaseAdmin.auth.admin.deleteUser(id);
     
     if (supabaseError) {
       return res.status(400).json({
