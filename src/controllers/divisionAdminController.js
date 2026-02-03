@@ -110,9 +110,11 @@ export const getMyTeamMembers = async (req, res) => {
 
     res.json({
       success: true,
-      division: divisionInfo[0],
-      count: members.length,
-      data: members
+      data: {
+        division: divisionInfo[0],
+        count: members.length,
+        members: members
+      }
     });
   } catch (error) {
     console.error('Get team members error:', error);
@@ -321,8 +323,10 @@ export const getTeamPermissionsMatrix = async (req, res) => {
 
     res.json({
       success: true,
-      modules: modules.map(m => ({ code: m.code, name: m.name, icon: m.icon })),
-      matrix
+      data: {
+        modules: modules.map(m => ({ code: m.code, name: m.name, icon: m.icon })),
+        matrix
+      }
     });
   } catch (error) {
     console.error('Get team permissions matrix error:', error);
