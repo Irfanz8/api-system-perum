@@ -80,6 +80,7 @@ CREATE TABLE user_divisions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     division_id UUID NOT NULL REFERENCES divisions(id) ON DELETE CASCADE,
+    is_division_admin BOOLEAN DEFAULT false,
     assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, division_id)

@@ -76,7 +76,7 @@ export const getMyPermissions = async (req, res) => {
 
     console.log('[DEBUG] Querying user_divisions...');
     const divisionsResult = await db`
-      SELECT d.id, d.name, d.code
+      SELECT d.id, d.name, d.code, ud.is_division_admin
       FROM user_divisions ud
       JOIN divisions d ON ud.division_id = d.id
       WHERE ud.user_id = ${userId} AND d.is_active = true
