@@ -15,7 +15,7 @@ export const getMyDivision = async (req, res) => {
         d.code,
         d.description,
         d.is_active,
-        COUNT(DISTINCT ud.user_id) as member_count,
+        COUNT(DISTINCT ud2.user_id) as member_count,
         ud.created_at as admin_since
       FROM user_divisions ud
       JOIN divisions d ON ud.division_id = d.id
