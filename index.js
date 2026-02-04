@@ -19,6 +19,9 @@ import divisionRoutes from './src/routes/divisions.js';
 import divisionAdminRoutes from './src/routes/divisionAdmin.js';
 import moduleRoutes from './src/routes/modules.js';
 import permissionRoutes from './src/routes/permissions.js';
+import dashboardRoutes from './src/routes/dashboard.js';
+import reportsRoutes from './src/routes/reports.js';
+import notificationRoutes from './src/routes/notifications.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -72,7 +75,10 @@ app.get('/', (req, res) => {
         divisions: '/api/divisions',
         divisionAdmin: '/api/division-admin',
         modules: '/api/modules',
-        permissions: '/api/permissions'
+        permissions: '/api/permissions',
+        dashboard: '/api/dashboard',
+        reports: '/api/reports',
+        notifications: '/api/notifications'
       }
   });
 });
@@ -89,6 +95,9 @@ app.use('/api/divisions', divisionRoutes);
 app.use('/api/division-admin', divisionAdminRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/permissions', permissionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Swagger documentation
 const swaggerUiOptions = {

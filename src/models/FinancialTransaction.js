@@ -34,6 +34,63 @@ class FinancialTransaction {
     return result;
   }
 
+  static async getAllPaginated(filters = {}, pagination = {}) {
+    const { limit = 10, offset = 0, sortBy = 'transaction_date', sortOrder = 'desc' } = pagination;
+    
+    const conditions = [];
+    
+    if (filters.type) {
+      conditions.push(db`ft.type = ${filters.type}`);
+    }
+    if (filters.category) {
+      conditions.push(db`ft.category = ${filters.category}`);
+    }
+    if (filters.start_date) {
+      conditions.push(db`ft.transaction_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`ft.transaction_date <= ${filters.end_date}`);
+    }
+    if (filters.search) {
+      conditions.push(db`(ft.description ILIKE ${'%' + filters.search + '%'} OR ft.category ILIKE ${'%' + filters.search + '%'})`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    // Get total count
+    const countResult = await db`
+      SELECT COUNT(*) as total FROM financial_transactions ft
+      ${whereClause}
+    `;
+    const totalItems = parseInt(countResult[0].total);
+
+    // Build ORDER BY - using safe column mapping
+    const sortColumns = {
+      'transaction_date': db`ft.transaction_date`,
+      'created_at': db`ft.created_at`,
+      'amount': db`ft.amount`,
+      'type': db`ft.type`,
+      'category': db`ft.category`
+    };
+    const sortColumn = sortColumns[sortBy] || sortColumns['transaction_date'];
+    const orderDirection = sortOrder === 'asc' ? db`ASC` : db`DESC`;
+
+    // Get paginated data
+    const data = await db`
+      SELECT ft.*, p.name as property_name, u.username as created_by_name
+      FROM financial_transactions ft
+      LEFT JOIN properties p ON ft.property_id = p.id
+      LEFT JOIN users u ON ft.created_by = u.id
+      ${whereClause}
+      ORDER BY ${sortColumn} ${orderDirection}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    return { data, totalItems };
+  }
+
   static async getById(id) {
     const result = await db`
       SELECT ft.*, p.name as property_name, u.username as created_by_name

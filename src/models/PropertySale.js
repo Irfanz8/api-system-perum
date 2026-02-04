@@ -34,6 +34,66 @@ class PropertySale {
     return result;
   }
 
+  static async getAllPaginated(filters = {}, pagination = {}) {
+    const { limit = 10, offset = 0, sortBy = 'sale_date', sortOrder = 'desc' } = pagination;
+    
+    const conditions = [];
+    
+    if (filters.status) {
+      conditions.push(db`ps.status = ${filters.status}`);
+    }
+    if (filters.buyer_name) {
+      conditions.push(db`ps.buyer_name ILIKE ${'%' + filters.buyer_name + '%'}`);
+    }
+    if (filters.start_date) {
+      conditions.push(db`ps.sale_date >= ${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      conditions.push(db`ps.sale_date <= ${filters.end_date}`);
+    }
+    if (filters.search) {
+      conditions.push(db`(ps.buyer_name ILIKE ${'%' + filters.search + '%'} OR ps.buyer_email ILIKE ${'%' + filters.search + '%'} OR p.name ILIKE ${'%' + filters.search + '%'})`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    // Get total count (need LEFT JOIN for search on property name)
+    const countResult = await db`
+      SELECT COUNT(*) as total 
+      FROM property_sales ps
+      LEFT JOIN properties p ON ps.property_id = p.id
+      ${whereClause}
+    `;
+    const totalItems = parseInt(countResult[0].total);
+
+    // Build ORDER BY - using safe column mapping
+    const sortColumns = {
+      'sale_date': db`ps.sale_date`,
+      'created_at': db`ps.created_at`,
+      'sale_price': db`ps.sale_price`,
+      'status': db`ps.status`,
+      'buyer_name': db`ps.buyer_name`
+    };
+    const sortColumn = sortColumns[sortBy] || sortColumns['sale_date'];
+    const orderDirection = sortOrder === 'asc' ? db`ASC` : db`DESC`;
+
+    // Get paginated data
+    const data = await db`
+      SELECT ps.*, p.name as property_name, p.type as property_type, 
+             u.username as created_by_name
+      FROM property_sales ps
+      LEFT JOIN properties p ON ps.property_id = p.id
+      LEFT JOIN users u ON ps.created_by = u.id
+      ${whereClause}
+      ORDER BY ${sortColumn} ${orderDirection}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    return { data, totalItems };
+  }
+
   static async getById(id) {
     const result = await db`
       SELECT ps.*, p.name as property_name, p.type as property_type, 

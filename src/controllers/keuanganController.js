@@ -1,22 +1,25 @@
 import FinancialTransaction from '../models/FinancialTransaction.js';
+import { parsePaginationParams, buildPaginatedApiResponse } from '../utils/pagination.js';
 
-// Get all financial transactions
+// Get all financial transactions with pagination
 export const getAllTransactions = async (req, res) => {
   try {
+    const { page, limit, offset, sortBy, sortOrder } = parsePaginationParams(req.query, {
+      defaultSortBy: 'transaction_date',
+      allowedSortFields: ['transaction_date', 'created_at', 'amount', 'type', 'category']
+    });
+
     const filters = {
       type: req.query.type,
       category: req.query.category,
       start_date: req.query.start_date,
       end_date: req.query.end_date,
-      limit: req.query.limit ? parseInt(req.query.limit) : null
+      search: req.query.search || null
     };
 
-    const transactions = await FinancialTransaction.getAll(filters);
-    res.json({
-      success: true,
-      count: transactions.length,
-      data: transactions
-    });
+    const { data, totalItems } = await FinancialTransaction.getAllPaginated(filters, { limit, offset, sortBy, sortOrder });
+    
+    res.json(buildPaginatedApiResponse(data, totalItems, page, limit));
   } catch (error) {
     res.status(500).json({
       success: false,

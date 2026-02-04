@@ -1,21 +1,25 @@
 import Inventory from '../models/Inventory.js';
+import { parsePaginationParams, buildPaginatedApiResponse } from '../utils/pagination.js';
+import { createLowStockNotification } from '../utils/notificationService.js';
 
-// Get all inventory items
+// Get all inventory items with pagination
 export const getAllInventory = async (req, res) => {
   try {
+    const { page, limit, offset, sortBy, sortOrder } = parsePaginationParams(req.query, {
+      defaultSortBy: 'created_at',
+      allowedSortFields: ['created_at', 'updated_at', 'name', 'quantity', 'unit_price', 'category']
+    });
+
     const filters = {
       category: req.query.category,
       supplier: req.query.supplier,
       low_stock: req.query.low_stock === 'true',
-      limit: req.query.limit ? parseInt(req.query.limit) : null
+      search: req.query.search || null
     };
 
-    const inventory = await Inventory.getAll(filters);
-    res.json({
-      success: true,
-      count: inventory.length,
-      data: inventory
-    });
+    const { data, totalItems } = await Inventory.getAllPaginated(filters, { limit, offset, sortBy, sortOrder });
+    
+    res.json(buildPaginatedApiResponse(data, totalItems, page, limit));
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -282,6 +286,16 @@ export const addInventoryTransaction = async (req, res) => {
     };
 
     const result = await Inventory.addTransaction(transactionData);
+
+    // Check if stock is now low and send notification
+    if (type === 'out') {
+      const inventory = await Inventory.getById(id);
+      if (inventory && inventory.quantity <= inventory.min_stock) {
+        createLowStockNotification(inventory).catch(err => 
+          console.error('Failed to send low stock notification:', err)
+        );
+      }
+    }
 
     res.status(201).json({
       success: true,

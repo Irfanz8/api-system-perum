@@ -1,22 +1,26 @@
 import PropertySale from '../models/PropertySale.js';
+import { parsePaginationParams, buildPaginatedApiResponse } from '../utils/pagination.js';
+import { createSaleNotification, createSaleCompleteNotification } from '../utils/notificationService.js';
 
-// Get all property sales
+// Get all property sales with pagination
 export const getAllSales = async (req, res) => {
   try {
+    const { page, limit, offset, sortBy, sortOrder } = parsePaginationParams(req.query, {
+      defaultSortBy: 'sale_date',
+      allowedSortFields: ['sale_date', 'created_at', 'sale_price', 'status', 'buyer_name']
+    });
+
     const filters = {
       status: req.query.status,
       buyer_name: req.query.buyer_name,
       start_date: req.query.start_date,
       end_date: req.query.end_date,
-      limit: req.query.limit ? parseInt(req.query.limit) : null
+      search: req.query.search || null
     };
 
-    const sales = await PropertySale.getAll(filters);
-    res.json({
-      success: true,
-      count: sales.length,
-      data: sales
-    });
+    const { data, totalItems } = await PropertySale.getAllPaginated(filters, { limit, offset, sortBy, sortOrder });
+    
+    res.json(buildPaginatedApiResponse(data, totalItems, page, limit));
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -91,6 +95,11 @@ export const createSale = async (req, res) => {
     };
 
     const sale = await PropertySale.create(saleData);
+
+    // Send notification to admins (async, don't wait)
+    createSaleNotification(sale, req.user?.id).catch(err => 
+      console.error('Failed to send sale notification:', err)
+    );
 
     res.status(201).json({
       success: true,
@@ -241,6 +250,11 @@ export const completeSale = async (req, res) => {
         error: 'Penjualan tidak ditemukan'
       });
     }
+
+    // Send notification about completed sale (async, don't wait)
+    createSaleCompleteNotification(result.sale).catch(err => 
+      console.error('Failed to send sale complete notification:', err)
+    );
 
     res.json({
       success: true,

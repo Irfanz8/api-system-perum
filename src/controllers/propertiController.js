@@ -1,22 +1,25 @@
 import Property from '../models/Property.js';
+import { parsePaginationParams, buildPaginatedApiResponse } from '../utils/pagination.js';
 
-// Get all properties
+// Get all properties with pagination
 export const getAllProperties = async (req, res) => {
   try {
+    const { page, limit, offset, sortBy, sortOrder } = parsePaginationParams(req.query, {
+      defaultSortBy: 'created_at',
+      allowedSortFields: ['created_at', 'updated_at', 'name', 'price', 'type', 'status']
+    });
+
     const filters = {
       type: req.query.type,
       status: req.query.status,
       min_price: req.query.min_price ? parseFloat(req.query.min_price) : null,
       max_price: req.query.max_price ? parseFloat(req.query.max_price) : null,
-      limit: req.query.limit ? parseInt(req.query.limit) : null
+      search: req.query.search || null
     };
 
-    const properties = await Property.getAll(filters);
-    res.json({
-      success: true,
-      count: properties.length,
-      data: properties
-    });
+    const { data, totalItems } = await Property.getAllPaginated(filters, { limit, offset, sortBy, sortOrder });
+    
+    res.json(buildPaginatedApiResponse(data, totalItems, page, limit));
   } catch (error) {
     res.status(500).json({
       success: false,

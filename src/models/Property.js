@@ -30,6 +30,61 @@ class Property {
     return result;
   }
 
+  static async getAllPaginated(filters = {}, pagination = {}) {
+    const { limit = 10, offset = 0, sortBy = 'created_at', sortOrder = 'desc' } = pagination;
+    
+    const conditions = [];
+    
+    if (filters.type) {
+      conditions.push(db`type = ${filters.type}`);
+    }
+    if (filters.status) {
+      conditions.push(db`status = ${filters.status}`);
+    }
+    if (filters.min_price) {
+      conditions.push(db`price >= ${filters.min_price}`);
+    }
+    if (filters.max_price) {
+      conditions.push(db`price <= ${filters.max_price}`);
+    }
+    if (filters.search) {
+      conditions.push(db`(name ILIKE ${'%' + filters.search + '%'} OR address ILIKE ${'%' + filters.search + '%'})`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    // Get total count
+    const countResult = await db`
+      SELECT COUNT(*) as total FROM properties
+      ${whereClause}
+    `;
+    const totalItems = parseInt(countResult[0].total);
+
+    // Build ORDER BY - using safe column mapping
+    const sortColumns = {
+      'created_at': db`created_at`,
+      'updated_at': db`updated_at`,
+      'name': db`name`,
+      'price': db`price`,
+      'type': db`type`,
+      'status': db`status`
+    };
+    const sortColumn = sortColumns[sortBy] || sortColumns['created_at'];
+    const orderDirection = sortOrder === 'asc' ? db`ASC` : db`DESC`;
+
+    // Get paginated data
+    const data = await db`
+      SELECT * FROM properties
+      ${whereClause}
+      ORDER BY ${sortColumn} ${orderDirection}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    return { data, totalItems };
+  }
+
   static async getById(id) {
     const result = await db`SELECT * FROM properties WHERE id = ${id}`;
     return result[0];

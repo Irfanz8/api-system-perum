@@ -1,19 +1,59 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import db from '../config/database.js';
 import { ROLES, isValidRole } from '../utils/roles.js';
+import { parsePaginationParams, buildPaginatedApiResponse } from '../utils/pagination.js';
 
 /**
- * Get all users (superadmin only)
+ * Get all users with pagination (superadmin only)
  */
 export const getAllUsers = async (req, res) => {
   try {
-    const result = await db`SELECT id, username, email, role, created_at, updated_at FROM users ORDER BY created_at DESC`;
-    
-    res.json({
-      success: true,
-      count: result.length,
-      data: result
+    const { page, limit, offset, sortBy, sortOrder } = parsePaginationParams(req.query, {
+      defaultSortBy: 'created_at',
+      allowedSortFields: ['created_at', 'updated_at', 'username', 'email', 'role']
     });
+
+    const search = req.query.search || null;
+    const roleFilter = req.query.role || null;
+
+    // Build WHERE conditions
+    const conditions = [];
+    if (search) {
+      conditions.push(db`(username ILIKE ${'%' + search + '%'} OR email ILIKE ${'%' + search + '%'})`);
+    }
+    if (roleFilter) {
+      conditions.push(db`role = ${roleFilter}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? db`WHERE ${conditions.reduce((a, b) => db`${a} AND ${b}`)}`
+      : db``;
+
+    // Get total count
+    const countResult = await db`SELECT COUNT(*) as total FROM users ${whereClause}`;
+    const totalItems = parseInt(countResult[0].total);
+
+    // Build ORDER BY - using safe column mapping
+    const sortColumns = {
+      'created_at': db`created_at`,
+      'updated_at': db`updated_at`,
+      'username': db`username`,
+      'email': db`email`,
+      'role': db`role`
+    };
+    const sortColumn = sortColumns[sortBy] || sortColumns['created_at'];
+    const orderDirection = sortOrder === 'asc' ? db`ASC` : db`DESC`;
+
+    // Get paginated data
+    const data = await db`
+      SELECT id, username, email, role, created_at, updated_at 
+      FROM users 
+      ${whereClause}
+      ORDER BY ${sortColumn} ${orderDirection}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    
+    res.json(buildPaginatedApiResponse(data, totalItems, page, limit));
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({
