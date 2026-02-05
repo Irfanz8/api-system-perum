@@ -99,18 +99,34 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+// Serve static documentation files
+app.use('/api-docs-files', express.static('docs'));
+
+// Serve auto-generated swagger spec as JSON
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Swagger documentation
 const swaggerUiOptions = {
-  customCss: '.swagger-ui .topbar { display: none }',
+  customCss: '.swagger-ui .topbar { display: block }', // Enable topbar for Explorer
   customSiteTitle: 'API Sistem Pengelolaan Perumahan',
+  explorer: true, // Enable Explorer mode
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
     filter: true,
-    tryItOutEnabled: true
+    tryItOutEnabled: true,
+    urls: [
+      { url: '/api-docs/swagger.json', name: 'Main API (Auto-generated)' },
+      { url: '/api-docs-files/dashboard_api.json', name: 'Dashboard API' },
+      { url: '/api-docs-files/reports_api.json', name: 'Reports API' },
+      { url: '/api-docs-files/notifications_api.json', name: 'Notifications API' }
+    ]
   }
 };
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(null, swaggerUiOptions));
 
 // Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {

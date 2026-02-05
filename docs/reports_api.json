@@ -1,0 +1,140 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Reports & Export System Perumahan",
+    "version": "1.0.0",
+    "description": "Documentation for Reports and Export endpoints"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/reports/keuangan/export": {
+      "get": {
+        "summary": "Export financial report",
+        "tags": ["Reports"],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "default": "csv" } },
+          { "name": "startDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "endDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "columns", "in": "query", "schema": { "type": "string" }, "description": "Comma-separated columns" }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV File Download",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/properti/export": {
+      "get": {
+        "summary": "Export properties report",
+        "tags": ["Reports"],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "default": "csv" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["available", "sold", "reserved"] } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } },
+          { "name": "columns", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV File Download",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/penjualan/export": {
+      "get": {
+        "summary": "Export sales report",
+        "tags": ["Reports"],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "default": "csv" } },
+          { "name": "startDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "endDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "columns", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV File Download",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/persediaan/export": {
+      "get": {
+        "summary": "Export inventory report",
+        "tags": ["Reports"],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "default": "csv" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "lowStock", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "columns", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV File Download",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/users/export": {
+      "get": {
+        "summary": "Export users report (Superadmin only)",
+        "tags": ["Reports"],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "default": "csv" } },
+          { "name": "role", "in": "query", "schema": { "type": "string" } },
+          { "name": "columns", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV File Download",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
