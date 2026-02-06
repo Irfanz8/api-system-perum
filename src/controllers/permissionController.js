@@ -74,21 +74,19 @@ export const getMyPermissions = async (req, res) => {
     
     console.log(`[DEBUG] Getting permissions for user: ${userId} (${userRole})`);
 
-    console.log('[DEBUG] Querying user_divisions...');
-    const divisionsResult = await db`
-      SELECT d.id, d.name, d.code, ud.is_division_admin
-      FROM user_divisions ud
-      JOIN divisions d ON ud.division_id = d.id
-      WHERE ud.user_id = ${userId} AND d.is_active = true
-    `;
-    console.log(`[DEBUG] Found ${divisionsResult.length} divisions`);
-
-    console.log('[DEBUG] Querying modules...');
-    const modulesResult = await db`SELECT id, code, name, icon, route, sort_order FROM modules WHERE is_active = true ORDER BY sort_order ASC`;
-    console.log(`[DEBUG] Found ${modulesResult.length} modules`);
-
+    // For superadmin - query modules and divisions in parallel
     if (userRole === 'superadmin') {
       console.log('[DEBUG] User is superadmin, granting all permissions');
+      
+      const [divisionsResult, modulesResult] = await Promise.all([
+        db`SELECT d.id, d.name, d.code, ud.is_division_admin
+           FROM user_divisions ud
+           JOIN divisions d ON ud.division_id = d.id
+           WHERE ud.user_id = ${userId} AND d.is_active = true`,
+        db`SELECT id, code, name, icon, route, sort_order 
+           FROM modules WHERE is_active = true ORDER BY sort_order ASC`
+      ]);
+      
       const permissions = {};
       modulesResult.forEach(m => {
         permissions[m.code] = {
@@ -113,23 +111,31 @@ export const getMyPermissions = async (req, res) => {
       });
     }
 
-    console.log('[DEBUG] Querying user_permissions...');
-    const permissionsResult = await db`
-      SELECT 
-        m.code,
-        m.name,
-        m.icon,
-        m.route,
-        COALESCE(up.can_view, false) as can_view,
-        COALESCE(up.can_create, false) as can_create,
-        COALESCE(up.can_update, false) as can_update,
-        COALESCE(up.can_delete, false) as can_delete
-      FROM modules m
-      LEFT JOIN user_permissions up ON m.id = up.module_id AND up.user_id = ${userId}
-      WHERE m.is_active = true
-      ORDER BY m.sort_order ASC
-    `;
-    console.log(`[DEBUG] Found ${permissionsResult.length} permission entries`);
+    // For non-superadmin - run all queries in parallel
+    console.log('[DEBUG] Querying permissions in parallel...');
+    const [divisionsResult, modulesResult, permissionsResult] = await Promise.all([
+      db`SELECT d.id, d.name, d.code, ud.is_division_admin
+         FROM user_divisions ud
+         JOIN divisions d ON ud.division_id = d.id
+         WHERE ud.user_id = ${userId} AND d.is_active = true`,
+      db`SELECT id, code, name, icon, route, sort_order 
+         FROM modules WHERE is_active = true ORDER BY sort_order ASC`,
+      db`SELECT 
+          m.code,
+          m.name,
+          m.icon,
+          m.route,
+          COALESCE(up.can_view, false) as can_view,
+          COALESCE(up.can_create, false) as can_create,
+          COALESCE(up.can_update, false) as can_update,
+          COALESCE(up.can_delete, false) as can_delete
+        FROM modules m
+        LEFT JOIN user_permissions up ON m.id = up.module_id AND up.user_id = ${userId}
+        WHERE m.is_active = true
+        ORDER BY m.sort_order ASC`
+    ]);
+    
+    console.log(`[DEBUG] Found ${divisionsResult.length} divisions, ${modulesResult.length} modules, ${permissionsResult.length} permission entries`);
 
     const permissions = {};
     permissionsResult.forEach(p => {

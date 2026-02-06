@@ -12,44 +12,44 @@ export const getDashboardStats = async (req, res) => {
     const end = endDate || new Date().toISOString().split('T')[0];
     const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // Property counts by status
-    const propertyStats = await db`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'available') as available_count,
-        COUNT(*) FILTER (WHERE status = 'sold') as sold_count,
-        COUNT(*) FILTER (WHERE status = 'reserved') as reserved_count,
-        COUNT(*) as total_count
-      FROM properties
-    `;
-
-    // Sales stats within date range
-    const salesStats = await db`
-      SELECT 
-        COUNT(*) as total_sales,
-        COUNT(*) FILTER (WHERE status = 'completed') as completed_sales,
-        COUNT(*) FILTER (WHERE status = 'pending') as pending_sales,
-        COALESCE(SUM(sale_price) FILTER (WHERE status = 'completed'), 0) as total_revenue
-      FROM property_sales
-      WHERE sale_date >= ${start} AND sale_date <= ${end}
-    `;
-
-    // Financial summary within date range
-    const financialStats = await db`
-      SELECT 
-        COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as total_income,
-        COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as total_expense,
-        COUNT(*) as total_transactions
-      FROM financial_transactions
-      WHERE transaction_date >= ${start} AND transaction_date <= ${end}
-    `;
-
-    // Low stock inventory count
-    const inventoryStats = await db`
-      SELECT 
-        COUNT(*) as total_items,
-        COUNT(*) FILTER (WHERE quantity <= min_stock) as low_stock_count
-      FROM inventory
-    `;
+    // Run all stats queries in parallel
+    const [propertyStats, salesStats, financialStats, inventoryStats] = await Promise.all([
+      // Property counts by status
+      db`
+        SELECT 
+          COUNT(*) FILTER (WHERE status = 'available') as available_count,
+          COUNT(*) FILTER (WHERE status = 'sold') as sold_count,
+          COUNT(*) FILTER (WHERE status = 'reserved') as reserved_count,
+          COUNT(*) as total_count
+        FROM properties
+      `,
+      // Sales stats within date range
+      db`
+        SELECT 
+          COUNT(*) as total_sales,
+          COUNT(*) FILTER (WHERE status = 'completed') as completed_sales,
+          COUNT(*) FILTER (WHERE status = 'pending') as pending_sales,
+          COALESCE(SUM(sale_price) FILTER (WHERE status = 'completed'), 0) as total_revenue
+        FROM property_sales
+        WHERE sale_date >= ${start} AND sale_date <= ${end}
+      `,
+      // Financial summary within date range
+      db`
+        SELECT 
+          COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as total_income,
+          COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as total_expense,
+          COUNT(*) as total_transactions
+        FROM financial_transactions
+        WHERE transaction_date >= ${start} AND transaction_date <= ${end}
+      `,
+      // Low stock inventory count
+      db`
+        SELECT 
+          COUNT(*) as total_items,
+          COUNT(*) FILTER (WHERE quantity <= min_stock) as low_stock_count
+        FROM inventory
+      `
+    ]);
 
     res.json({
       success: true,
@@ -181,37 +181,39 @@ export const getRecentTransactions = async (req, res) => {
   try {
     const limit = Math.min(50, parseInt(req.query.limit) || 10);
 
-    // Recent sales
-    const recentSales = await db`
-      SELECT 
-        ps.id,
-        'sale' as transaction_type,
-        ps.buyer_name as description,
-        ps.sale_price as amount,
-        ps.status,
-        ps.sale_date as date,
-        p.name as property_name
-      FROM property_sales ps
-      LEFT JOIN properties p ON ps.property_id = p.id
-      ORDER BY ps.created_at DESC
-      LIMIT ${limit}
-    `;
-
-    // Recent financial transactions
-    const recentFinancial = await db`
-      SELECT 
-        ft.id,
-        ft.type as transaction_type,
-        ft.description,
-        ft.amount,
-        ft.category as status,
-        ft.transaction_date as date,
-        p.name as property_name
-      FROM financial_transactions ft
-      LEFT JOIN properties p ON ft.property_id = p.id
-      ORDER BY ft.created_at DESC
-      LIMIT ${limit}
-    `;
+    // Run both queries in parallel
+    const [recentSales, recentFinancial] = await Promise.all([
+      // Recent sales
+      db`
+        SELECT 
+          ps.id,
+          'sale' as transaction_type,
+          ps.buyer_name as description,
+          ps.sale_price as amount,
+          ps.status,
+          ps.sale_date as date,
+          p.name as property_name
+        FROM property_sales ps
+        LEFT JOIN properties p ON ps.property_id = p.id
+        ORDER BY ps.created_at DESC
+        LIMIT ${limit}
+      `,
+      // Recent financial transactions
+      db`
+        SELECT 
+          ft.id,
+          ft.type as transaction_type,
+          ft.description,
+          ft.amount,
+          ft.category as status,
+          ft.transaction_date as date,
+          p.name as property_name
+        FROM financial_transactions ft
+        LEFT JOIN properties p ON ft.property_id = p.id
+        ORDER BY ft.created_at DESC
+        LIMIT ${limit}
+      `
+    ]);
 
     // Combine and sort by date
     const allTransactions = [...recentSales, ...recentFinancial]

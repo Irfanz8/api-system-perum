@@ -524,10 +524,14 @@ async function assignDefaultRBAC(userId, role) {
   try {
     console.log(`🔐 Assigning default RBAC for user ${userId} with role ${role}`);
 
-    const modules = await db`SELECT id, code FROM modules WHERE is_active = true`;
-    const divisions = await db`SELECT id, code FROM divisions WHERE is_active = true`;
+    // Fetch modules and divisions in parallel
+    const [modules, divisions] = await Promise.all([
+      db`SELECT id, code FROM modules WHERE is_active = true`,
+      db`SELECT id, code FROM divisions WHERE is_active = true`
+    ]);
 
-    for (const mod of modules) {
+    // Build permission values for batch insert
+    const permissionValues = modules.map(mod => {
       let canView = false, canCreate = false, canUpdate = false, canDelete = false;
 
       if (role === ROLES.SUPERADMIN) {
@@ -543,21 +547,35 @@ async function assignDefaultRBAC(userId, role) {
         }
       }
 
+      return {
+        user_id: userId,
+        module_id: mod.id,
+        can_view: canView,
+        can_create: canCreate,
+        can_update: canUpdate,
+        can_delete: canDelete
+      };
+    });
+
+    // Batch insert permissions
+    if (permissionValues.length > 0) {
       await db`
-        INSERT INTO user_permissions (user_id, module_id, can_view, can_create, can_update, can_delete)
-        VALUES (${userId}, ${mod.id}, ${canView}, ${canCreate}, ${canUpdate}, ${canDelete})
+        INSERT INTO user_permissions ${db(permissionValues, 'user_id', 'module_id', 'can_view', 'can_create', 'can_update', 'can_delete')}
         ON CONFLICT (user_id, module_id) DO NOTHING
       `;
     }
 
-    if (role === ROLES.ADMIN || role === ROLES.SUPERADMIN) {
-      for (const div of divisions) {
-        await db`
-          INSERT INTO user_divisions (user_id, division_id)
-          VALUES (${userId}, ${div.id})
-          ON CONFLICT (user_id, division_id) DO NOTHING
-        `;
-      }
+    // Batch insert divisions for admin/superadmin
+    if ((role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && divisions.length > 0) {
+      const divisionValues = divisions.map(div => ({
+        user_id: userId,
+        division_id: div.id
+      }));
+
+      await db`
+        INSERT INTO user_divisions ${db(divisionValues, 'user_id', 'division_id')}
+        ON CONFLICT (user_id, division_id) DO NOTHING
+      `;
     }
 
     console.log(`✅ Default RBAC assigned for user ${userId}`);
